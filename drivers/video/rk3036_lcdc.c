@@ -685,6 +685,7 @@ static int rk312x_lcdc_parse_dt(struct lcdc_device *lcdc_dev,
 }
 #endif
 
+#define CPU_AXI_QOS_PRIORITY_LEVEL(h, l)        ((((h) & 3) << 2) | ((l) & 3))
 
 int rk_lcdc_init(int lcdc_id)
 {
