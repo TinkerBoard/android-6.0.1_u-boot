@@ -702,6 +702,11 @@ int rk_lcdc_init(int lcdc_id)
 			lcdc_dev->regs = 0x1010e000;
 		}
 	}
+	if (lcdc_dev->soc_type == CONFIG_RK3036) {
+		writel(CPU_AXI_QOS_PRIORITY_LEVEL(3, 3), 0x1012f008);
+	} else {
+		writel(CPU_AXI_QOS_PRIORITY_LEVEL(3, 3), 0x1012f188);
+	}
 	lcdc_msk_reg(lcdc_dev, SYS_CTRL, m_AUTO_GATING_EN |
 		      m_LCDC_STANDBY | m_DMA_STOP, v_AUTO_GATING_EN(0)|
 		      v_LCDC_STANDBY(0)|v_DMA_STOP(0));
