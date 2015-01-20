@@ -86,8 +86,14 @@ uint32 IReadLoaderFlag(void)
 
 void ISetLoaderFlag(uint32 flag)
 {
-#if defined(CONFIG_RKCHIP_RK3288) || defined(CONFIG_RKCHIP_RK3126) || defined(CONFIG_RKCHIP_RK3128)
+#if defined(CONFIG_RKCHIP_RK3288)
 	writel(flag, RKIO_PMU_PHYS + PMU_SYS_REG0);
+#elif defined(CONFIG_RKCHIP_RK3126) || defined(CONFIG_RKCHIP_RK3128)
+	writel(flag, RKIO_PMU_PHYS + PMU_SYS_REG0);
+	// if set maskrom flag, also set GRF REG0 for ddr driver.
+	if (flag == 0xEF08A53C) {
+		writel(flag, RKIO_GRF_PHYS + GRF_OS_REG0);
+	}
 #elif defined(CONFIG_RKCHIP_RK3036)
 	writel(flag, RKIO_GRF_PHYS + GRF_OS_REG4);
 #else
