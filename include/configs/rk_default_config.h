@@ -250,10 +250,31 @@
  */
 #define CONFIG_RK_SDMMC_BOOT_EN
 #define CONFIG_RK_SDCARD_BOOT_EN
+#undef CONFIG_RK_UMS_BOOT_EN
 #ifdef CONFIG_SECOND_LEVEL_BOOTLOADER
 #define CONFIG_MERGER_MINILOADER
 #define CONFIG_RK_FLASH_BOOT_EN
 #endif /* CONFIG_SECOND_LEVEL_BOOTLOADER */
+
+
+/*
+ * USB Host support, default no using
+ * Please first select USB host controller if you want to use UMS Boot
+ * Up to one USB host controller could be selected to enable for booting
+ * from USB Mass Storage device.
+ *
+ * PLS define a host controller from:
+ *	RKUSB_UMS_BOOT_FROM_OTG
+ *	RKUSB_UMS_BOOT_FROM_HOST1
+ *	RKUSB_UMS_BOOT_FROM_HOST2
+ *	RKUSB_UMS_BOOT_FROM_HSIC
+ *
+ * Default all are disable, define in each plat.h
+ */
+#undef RKUSB_UMS_BOOT_FROM_OTG
+#undef RKUSB_UMS_BOOT_FROM_HOST1
+#undef RKUSB_UMS_BOOT_FROM_HOST2
+#undef RKUSB_UMS_BOOT_FROM_HSIC
 
 
 /* 

@@ -40,6 +40,7 @@
 #define     BOOT_FROM_SD0     (1<<2)
 #define     BOOT_FROM_SD1     (1<<3)
 #define     BOOT_FROM_SPI     (1<<4)
+#define     BOOT_FROM_UMS     (1<<5)
 
 #define     FTL_OK                  0
 #define     FTL_ERROR               -1
@@ -78,6 +79,9 @@ extern  uint32 UsbStorageSysDataLoad(uint32 offset, uint32 len, uint32 *Buf);
 extern  uint32 UsbStorageSysDataStore(uint32 offset, uint32 len, uint32 *Buf);
 #ifdef RK_SDCARD_BOOT_EN
 extern  uint32 StorageSDCardUpdateMode(void);
+#endif
+#ifdef RK_UMS_BOOT_EN
+extern uint32 StorageSDCardUpdateMode(void);
 #endif
 
 //local memory operation function

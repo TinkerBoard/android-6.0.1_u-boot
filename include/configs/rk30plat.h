@@ -47,6 +47,7 @@
 
 /* undef some module for rk chip */
 #if defined(CONFIG_RKCHIP_RK3036)
+	#undef CONFIG_RK_UMS_BOOT_EN
 	#undef CONFIG_RK_SPI
 	#undef CONFIG_PM_SUBSYSTEM
 	#undef CONFIG_RK_PWM
@@ -55,6 +56,7 @@
 #endif /* CONFIG_RKCHIP_RK3036 */
 
 #if defined(CONFIG_RKCHIP_RK3126)
+	#undef CONFIG_RK_UMS_BOOT_EN
 	#undef CONFIG_RK_SPI
 	#undef CONFIG_RK_PWM_REMOTE
 	#undef CONFIG_RK_DEVICEINFO
@@ -63,6 +65,7 @@
 
 #if defined(CONFIG_RKCHIP_RK3128)
 	#define CONFIG_SECUREBOOT_CRYPTO
+	#undef CONFIG_RK_UMS_BOOT_EN
 	#undef CONFIG_RK_SPI
 #endif /* CONFIG_RKCHIP_RK3128 */
 
@@ -109,20 +112,48 @@
 #endif /* CONFIG_CMD_FASTBOOT */
 
 
+#ifdef CONFIG_RK_UMS_BOOT_EN
+/*
+ * USB Host support, default no using
+ * Please first select USB host controller if you want to use UMS Boot
+ * Up to one USB host controller could be selected to enable for booting
+ * from USB Mass Storage device.
+ *
+ * PLS define a host controller from:
+ *	RKUSB_UMS_BOOT_FROM_OTG
+ *	RKUSB_UMS_BOOT_FROM_HOST1
+ *	RKUSB_UMS_BOOT_FROM_HOST2
+ *
+ * First define the host controller here
+ */
+
+/* Check UMS Boot Host define */
+#define RKUSB_UMS_BOOT_CNT (defined(RKUSB_UMS_BOOT_FROM_OTG) + \
+			    defined(RKUSB_UMS_BOOT_FROM_HOST1) + \
+			    defined(RKUSB_UMS_BOOT_FROM_HOST2))
+
+#if (RKUSB_UMS_BOOT_CNT == 0)
+	#error "PLS Select a USB host controller!"
+#elif (RKUSB_UMS_BOOT_CNT > 1)
+	#error "Only one USB host controller can be selected!"
+#else
+	#define CONFIG_CMD_USB
+	#define CONFIG_USB_STORAGE
+	#define CONFIG_PARTITIONS
+#endif
+
+
 /*
  * USB Host support, default no using
  * please first check plat if you want to using usb host
  */
-#if 0
-/* dwc otg */
-#define CONFIG_USB_DWC_HCD
-/* echi */
-#undef CONFIG_USB_EHCI
-#undef CONFIG_USB_EHCI_RK
-
-#define CONFIG_CMD_USB
-#define CONFIG_USB_STORAGE
+#if defined(RKUSB_UMS_BOOT_FROM_HOST1)
+	#define CONFIG_USB_EHCI
+	#define CONFIG_USB_EHCI_RK
+#elif defined(RKUSB_UMS_BOOT_FROM_HOST2) || defined(RKUSB_UMS_BOOT_FROM_OTG)
+	#define CONFIG_USB_DWC_HCD
 #endif
+#endif /* CONFIG_RK_UMS_BOOT_EN */
 
 
 /* more config for display */

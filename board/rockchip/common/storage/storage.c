@@ -126,8 +126,36 @@ MEM_FUN_T sd0FunOp =
 };
 #endif
 
+#ifdef RK_UMS_BOOT_EN
+MEM_FUN_T UMSFunOp =
+{
+	0,
+	BOOT_FROM_UMS,
+	0,
+	UMSInit,
+	UMSReadID,
+	UMSReadPBA,
+	NULL,
+	UMSReadLBA,
+	NULL,
+	NULL,
+	UMSReadFlashInfo,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	UMSGetCapacity,
+	UMSSysDataLoad,
+	NULL,
+};
+#endif
+
 static MEM_FUN_T *memFunTab[] = 
 {
+#ifdef RK_UMS_BOOT_EN
+	&UMSFunOp,
+#endif
+
 #ifdef RK_SDCARD_BOOT_EN
 	&sd0FunOp,
 #endif
@@ -451,3 +479,14 @@ uint32 StorageSDCardUpdateMode(void)
 }
 #endif
 
+#ifdef RK_UMS_BOOT_EN
+uint32 StorageUMSUpdateMode(void)
+{
+	if ((StorageGetBootMedia() == BOOT_FROM_UMS) && (UMSGetBootMode() == UMS_UPDATE))
+	{
+		return 1;
+	}
+
+	return 0;
+}
+#endif

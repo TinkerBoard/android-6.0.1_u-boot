@@ -8,8 +8,8 @@
 
 #include "ehci.h"
 #include <asm/arch/gpio.h>
+#include <asm/arch/usbhost.h>
 
-#define RK32_EHCI_BASE (0xff500000)
 /*
  * Create the appropriate control structures to manage
  * a new EHCI host controller.
@@ -17,15 +17,13 @@
 int ehci_hcd_init(int index, enum usb_init_type init,
 		struct ehci_hccr **hccr, struct ehci_hcor **hcor)
 {
-	// TODO: POWER enable for ehci hcd 1.2V, external 5V power
-	gpio_direction_output(GPIO_BANK0 | GPIO_B6, 1); //gpio0_B6  output high
+	if (init == USB_INIT_DEVICE)
+		return -ENODEV;
 	
-	// TODO: enable clock
-	
-	*hccr = (struct ehci_hccr *)(RK32_EHCI_BASE);
-	*hcor = (struct ehci_hcor *)(RK32_EHCI_BASE + 0x10);
-	
-	printf("ehci_hcd_init,complete\n");
+	*hccr = (struct ehci_hccr *)(rkusb_active_hcd->regbase);
+	*hcor = (struct ehci_hcor *)(rkusb_active_hcd->regbase + 0x10);
+
+	printf("ehci_hcd_init index %d,complete\n", index);
 	return 0;
 }
 

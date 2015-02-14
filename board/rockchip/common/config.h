@@ -96,6 +96,12 @@ DECLARE_GLOBAL_DATA_PTR;
 #endif
 
 
+/* rk ums boot config */
+#ifdef CONFIG_RK_UMS_BOOT_EN
+	#define RK_UMS_BOOT_EN
+#endif
+
+
 #define __packed	__attribute__((packed))
 #define __align(x)	__attribute__ ((aligned(x)))
 
@@ -170,6 +176,10 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #ifdef CONFIG_RK_FLASH_BOOT_EN
 #include "mediaboot/nandflash_boot.h"
+#endif
+
+#ifdef CONFIG_RK_UMS_BOOT_EN
+#include "mediaboot/UMSBoot.h"
 #endif
 
 // by cmy
