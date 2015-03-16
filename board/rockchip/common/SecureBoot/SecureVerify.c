@@ -80,6 +80,7 @@ static bool SecureNSModeSignCheck(uint8 * rsaHash, uint8 *Hash, uint8 length)
 
 static bool SecureNSModeUbootImageShaCheck(second_loader_hdr *hdr)
 {
+#ifndef SECUREBOOT_CRYPTO_EN
 	uint8_t *sha;
 	SHA_CTX ctx;
 	int size = SHA_DIGEST_SIZE > hdr->hash_len ? hdr->hash_len : SHA_DIGEST_SIZE;
@@ -90,6 +91,26 @@ static bool SecureNSModeUbootImageShaCheck(second_loader_hdr *hdr)
 	SHA_update(&ctx, &hdr->loader_load_size, sizeof(hdr->loader_load_size));
 	SHA_update(&ctx, &hdr->hash_len, sizeof(hdr->hash_len));
 	sha = SHA_final(&ctx);
+#else
+	uint32 size;
+	uint8 *sha;
+	uint32 hwDataHash[8];
+
+	size = hdr->loader_load_size + sizeof(hdr->loader_load_size) \
+		 + sizeof(hdr->loader_load_addr) + sizeof(hdr->hash_len);
+
+	CryptoSHAInit(size, 160);
+	/* rockchip's second level image. */
+	CryptoSHAStart((uint32 *)((void *)hdr + sizeof(second_loader_hdr)), hdr->loader_load_size);
+	CryptoSHAStart((uint32 *)&hdr->loader_load_addr, sizeof(hdr->loader_load_addr));
+	CryptoSHAStart((uint32 *)&hdr->loader_load_size, sizeof(hdr->loader_load_size));
+	CryptoSHAStart((uint32 *)&hdr->hash_len, sizeof(hdr->hash_len));
+
+	CryptoSHAEnd(hwDataHash);
+
+	sha = (char *)hwDataHash;
+	size = SHA_DIGEST_SIZE > hdr->hash_len ? hdr->hash_len : SHA_DIGEST_SIZE;
+#endif
 
 #if 0
 	int i = 0;
@@ -110,45 +131,47 @@ static bool SecureNSModeUbootImageShaCheck(second_loader_hdr *hdr)
 
 static bool SecureNSModeVerifyUbootImageSign(second_loader_hdr* hdr)
 {
-	if (gDrmKeyInfo.publicKeyLen == 0) {
-		PRINT_I("NS Mode allow flash unsigned loader.\n");
-		return true;
-	}
-
 	/* verify uboot iamge. */
 	if (memcmp(hdr->magic, RK_UBOOT_MAGIC, sizeof(RK_UBOOT_MAGIC)) != 0) {
 		PRINT_E("unrecognized image format!\n");
 		return false;
 	}
 
-	if (hdr->signTag != RK_UBOOT_SIGN_TAG) {
-		PRINT_E("unsigned image!\n");
-		return false;
-	}
-
-	if (!SecureBootEn) {
-		PRINT_E("loader sign mismatch, not allowed to flash!\n");
+	/* check image sha, make sure image is ok. */
+	if (!SecureNSModeUbootImageShaCheck(hdr)) {
+		printf("uboot sha mismatch!\n");
 		return false;
 	}
 
 	/* signed image, check with signature. */
-	/* check sha here. */
-	if (!SecureNSModeUbootImageShaCheck(hdr)) {
-		PRINT_E("sha mismatch!\n");
-		return false;
+	if (SecureBootEn) {
+		if (gDrmKeyInfo.publicKeyLen == 0) { // check loader publickey
+			PRINT_I("NS Mode allow flash unsigned loader.\n");
+			return false;
+		}
+
+		if (hdr->signTag != RK_UBOOT_SIGN_TAG) { // check image sign tag
+			PRINT_E("unsigned image!\n");
+			return false;
+		}
+
+		/* check rsa sign here. */
+		if (SecureNSModeSignCheck(hdr->rsaHash, hdr->hash, hdr->signlen)) {
+			return true;
+		} else {
+			PRINT_E("signature mismatch!\n");
+			return false;
+		}
 	}
-	/* check rsa sign here. */
-	if (SecureNSModeSignCheck(hdr->rsaHash, hdr->hash, hdr->signlen)) {
-		return true;
-	} else {
-		PRINT_E("signature mismatch!\n");
-		return false;
-	}
+
+	/* secureboot disable */
+	return true;
 }
 
 
 static bool SecureNSModeBootImageShaCheck(rk_boot_img_hdr *boothdr)
 {
+#ifndef SECUREBOOT_CRYPTO_EN
 	uint8_t *sha;
 	SHA_CTX ctx;
 	int size = SHA_DIGEST_SIZE > sizeof(boothdr->id) ? sizeof(boothdr->id) : SHA_DIGEST_SIZE;
@@ -171,6 +194,39 @@ static bool SecureNSModeBootImageShaCheck(rk_boot_img_hdr *boothdr)
 	SHA_update(&ctx, &boothdr->cmdline, sizeof(boothdr->cmdline));
 
 	sha = SHA_final(&ctx);
+#else
+	uint32 size;
+	uint8 *sha;
+	uint32 hwDataHash[8];
+
+	size = boothdr->kernel_size + sizeof(boothdr->kernel_size) \
+		+ boothdr->ramdisk_size + sizeof(boothdr->ramdisk_size) \
+		+ boothdr->second_size + sizeof(boothdr->second_size) \
+		+ sizeof(boothdr->tags_addr) + sizeof(boothdr->page_size) \
+		+ sizeof(boothdr->unused) + sizeof(boothdr->name) + sizeof(boothdr->cmdline);
+
+	CryptoSHAInit(size, 160);
+
+	/* Android image. */
+	CryptoSHAStart((uint32 *)boothdr->kernel_addr, boothdr->kernel_size);
+	CryptoSHAStart((uint32 *)&boothdr->kernel_size, sizeof(boothdr->kernel_size));
+	CryptoSHAStart((uint32 *)boothdr->ramdisk_addr, boothdr->ramdisk_size);
+	CryptoSHAStart((uint32 *)&boothdr->ramdisk_size, sizeof(boothdr->ramdisk_size));
+	CryptoSHAStart((uint32 *)boothdr->second_addr, boothdr->second_size);
+	CryptoSHAStart((uint32 *)&boothdr->second_size, sizeof(boothdr->second_size));
+
+	/* only rockchip's image add. */
+	CryptoSHAStart((uint32 *)&boothdr->tags_addr, sizeof(boothdr->tags_addr));
+	CryptoSHAStart((uint32 *)&boothdr->page_size, sizeof(boothdr->page_size));
+	CryptoSHAStart((uint32 *)&boothdr->unused, sizeof(boothdr->unused));
+	CryptoSHAStart((uint32 *)&boothdr->name, sizeof(boothdr->name));
+	CryptoSHAStart((uint32 *)&boothdr->cmdline, sizeof(boothdr->cmdline));
+
+	CryptoSHAEnd(hwDataHash);
+
+	sha = (char*)hwDataHash;
+	size = SHA_DIGEST_SIZE > sizeof(boothdr->id) ? sizeof(boothdr->id) : SHA_DIGEST_SIZE;
+#endif
 
 #if 0
 	int i = 0;
@@ -191,67 +247,97 @@ static bool SecureNSModeBootImageShaCheck(rk_boot_img_hdr *boothdr)
 
 static bool SecureNSModeVerifyBootImageSign(rk_boot_img_hdr* boothdr)
 {
-	if (gDrmKeyInfo.publicKeyLen == 0) {
-		PRINT_I("NS Mode allow flash unsigned loader.\n");
-		return true;
-	}
-
 	/* verify boot/recovery image */
 	if (memcmp(boothdr->magic, BOOT_MAGIC, BOOT_MAGIC_SIZE) != 0) {
 		return false;
 	}
 
-	if (boothdr->signTag != SECURE_BOOT_SIGN_TAG) {
-		return false;
-	}
-
-	if (!SecureBootEn) {
-		PRINT_E("loader sign mismatch, not allowed to flash!\n");
+	/* check image sha, make sure image is ok. */
+	if (!SecureNSModeBootImageShaCheck(boothdr)) {
+		printf("boot/recovery image sha mismatch!\n");
 		return false;
 	}
 
 	/* signed image, check with signature. */
-	/* check sha here. */
-	if (!SecureNSModeBootImageShaCheck(boothdr)) {
-		PRINT_E("sha mismatch!\n");
-		return false;
+	if (SecureBootEn) {
+		if (gDrmKeyInfo.publicKeyLen == 0) { // check loader publickey
+			PRINT_I("NS Mode allow flash unsigned loader.\n");
+			return false;
+		}
+
+		if (boothdr->signTag != SECURE_BOOT_SIGN_TAG) { // check image sign tag
+			return false;
+		}
+
+		/* check rsa sign here. */
+		if (SecureNSModeSignCheck((uint8 *)boothdr->rsaHash, (uint8 *)boothdr->id, boothdr->signlen)) {
+			return true;
+		} else {
+			PRINT_E("signature mismatch!\n");
+			return false;
+		}
 	}
-	/* check rsa sign here. */
-	if (SecureNSModeSignCheck((uint8 *)boothdr->rsaHash, (uint8 *)boothdr->id, boothdr->signlen)) {
-		return true;
-	} else {
-		PRINT_E("signature mismatch!\n");
-		return false;
-	}
+
+	/* secureboot disable */
+	return true;
 }
 
 
-static bool SecureNSModeBootImageSecureCheck(rk_boot_img_hdr *hdr, int unlocked)
+static bool SecureNSModeBootImageCheck(rk_boot_img_hdr *hdr, int unlocked)
 {
 	rk_boot_img_hdr *boothdr = (rk_boot_img_hdr *)hdr;
 
 	SecureBootCheckOK = 0;
 
+	/* if boot/recovery not include kernel */
 	if (memcmp(hdr->magic, BOOT_MAGIC, BOOT_MAGIC_SIZE) != 0) {
-		return false;
+		/* if soft crc32 checking kernel and boot image enable, it will take time */
+#ifdef CONFIG_BOOTRK_RK_IMAGE_CHECK
+		uint32 crc32 = 0;
+
+		debug("%s: Kernel image CRC32 check...\n", __func__);
+		crc32 = CRC_32CheckBuffer((uint8 *)hdr->kernel_addr, hdr->kernel_size + 4);
+		if (!crc32) {
+			printf("kernel image CRC32 failed!\n");
+			return false;
+		}
+		debug("Kernel CRC32 check ok.\n");
+
+		debug("%s: Boot image CRC32 check...\n", __func__);
+		crc32 = CRC_32CheckBuffer((uint8 *)hdr->ramdisk_addr, hdr->ramdisk_size + 4);
+		if (!crc32) {
+			printf("Boot image CRC32 failed!\n");
+			return false;
+		}
+		debug("Boot CRC32 check ok.\n");
+#endif /* CONFIG_BOOTRK_RK_IMAGE_CHECK */
+		return true;
 	}
 
+	/* if sha checking boot image, it will take time */
+#if defined(CONFIG_BOOTRK_OTA_IMAGE_CHECK) || defined(SECUREBOOT_CRYPTO_EN)
+	/* check image sha, make sure image is ok. */
+	if (!SecureNSModeBootImageShaCheck(boothdr)) {
+		printf("boot/recovery image sha mismatch!\n");
+		return false;
+	}
+#endif
+
+	/* signed image, check with signature. */
 	if (!unlocked && SecureBootEn && (boothdr->signTag == SECURE_BOOT_SIGN_TAG))
 	{
 		if (SecureNSModeSignCheck(boothdr->rsaHash, (uint8 *)boothdr->id, boothdr->signlen))
 		{
 			SecureBootCheckOK = 1;
-			return true;
 		}
 		else
 		{
 			SecureBootCheckOK = 0;
 			PRINT_E("SecureNSModeSignCheck failed\n");
-			return false;
 		}
 	}
 
-	return false;
+	return true;
 }
 
 
@@ -745,7 +831,7 @@ static bool SecureRKModeVerifyBootImage(rk_boot_img_hdr *boothdr)
 }
 
 
-static bool SecureRKModeBootImageSecureCheck(rk_boot_img_hdr *boothdr, int unlocked)
+static bool SecureRKModeBootImageCheck(rk_boot_img_hdr *boothdr, int unlocked)
 {
 	SecureBootCheckOK = 0;
 
@@ -853,6 +939,7 @@ static uint32 SecureRKModeInit(void)
 	if (0xFF == flag) {
 		secure = 1;
 	}
+	CryptoInit();
 #elif defined(CONFIG_RKCHIP_RK3288)
 	/* rk3288 efuse read word unit */
 	uint32 flag = 0;
@@ -860,13 +947,13 @@ static uint32 SecureRKModeInit(void)
 	if (flag & 0x01) {
 		secure = 1;
 	}
+	CryptoInit();
 #endif
 
 	if (secure != 0) {
 		SecureMode = SBOOT_MODE_RK;
 		printf("Secure Boot Mode: 0x%x\n", SecureMode);
 
-		CryptoInit();
 		StorageReadFlashInfo((uint8 *)&g_FlashInfo);
 
 		i = 0;
@@ -955,15 +1042,15 @@ bool SecureModeVerifyBootImage(rk_boot_img_hdr* boothdr)
 }
 
 
-bool SecureModeBootImageSecureCheck(rk_boot_img_hdr *hdr, int unlocked)
+bool SecureModeBootImageCheck(rk_boot_img_hdr *hdr, int unlocked)
 {
 #ifdef SECUREBOOT_CRYPTO_EN
 	if (SecureMode == SBOOT_MODE_RK) {
-		return SecureRKModeBootImageSecureCheck(hdr, unlocked);
+		return SecureRKModeBootImageCheck(hdr, unlocked);
 	}
 #endif
 
-	return SecureNSModeBootImageSecureCheck(hdr, unlocked);
+	return SecureNSModeBootImageCheck(hdr, unlocked);
 }
 
 
