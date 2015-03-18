@@ -53,3 +53,5 @@ void rk_hdmi_probe(vidinfo_t *panel);
 #endif
 
 #endif
+
+void lcd_standby(int enable, int mode);
