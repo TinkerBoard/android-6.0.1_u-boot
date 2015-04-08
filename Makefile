@@ -867,7 +867,7 @@ u-boot.ldr.hex u-boot.ldr.srec: u-boot.ldr FORCE
 ifdef CONFIG_ROCKCHIP
 
 # rk uboot version should consist of two digits, as 01
-RK_UBOOT_VERSION = 08
+RK_UBOOT_VERSION = 09
 
 ifdef CONFIG_RKCHIP_RK3288
 RKCHIP ?= RK3288
