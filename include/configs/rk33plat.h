@@ -77,8 +77,6 @@
 	#undef CONFIG_RK_UMS_BOOT_EN
 	#undef CONFIG_RK_PL330
 	#undef CONFIG_RK_DMAC
-
-	#undef CONFIG_LCD
 #endif
 
 /* fpga board configure */
@@ -201,10 +199,10 @@
 #define CONFIG_RK33_FB
 
 #ifdef CONFIG_RK_HDMI
-#define CONFIG_RK33_HDMI
+#define CONFIG_RK_HDMIV2
 #endif
 
-#define CONFIG_RK33_DSI
+#define CONFIG_RK32_DSI
 
 #undef CONFIG_UBOOT_CHARGE
 

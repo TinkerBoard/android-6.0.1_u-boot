@@ -266,7 +266,6 @@ enum lay_id {
 	NUM_LAYERS,
 };
 
-
 struct fb_dsp_info{
 	enum lay_id layer_id;
 	enum exynos_fb_data_format_t format;
@@ -331,6 +330,7 @@ typedef struct vidinfo {
 	unsigned int real_freq;
 	unsigned int pixelrepeat;
 	unsigned int vmode;//interlace mode
+	unsigned int color_mode;
     
 	/* parent clock name(MPLL, EPLL or VPLL) */
 	unsigned int pclk_name;
