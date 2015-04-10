@@ -184,6 +184,17 @@ export	HOSTARCH HOSTOS
 
 #########################################################################
 
+ifeq ($(ARCHV),aarch64)
+
+ifneq ($(wildcard ../toolchain/aarch64-linux-android-4.9),)
+CROSS_COMPILE   ?= $(shell pwd)/../toolchain/aarch64-linux-android-4.9/bin/aarch64-linux-android-
+endif
+ifneq ($(wildcard ../prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin),)
+CROSS_COMPILE   ?= $(shell pwd)/../prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin/aarch64-linux-android-
+endif
+
+else
+
 ifneq ($(wildcard ../toolchain/arm-eabi-4.8),)
 CROSS_COMPILE   ?= $(shell pwd)/../toolchain/arm-eabi-4.8/bin/arm-eabi-
 endif
@@ -202,6 +213,8 @@ endif
 ifneq ($(wildcard ../prebuilts/gcc/linux-x86/arm/arm-eabi-4.6/bin),)
 CROSS_COMPILE   ?= $(shell pwd)/../prebuilts/gcc/linux-x86/arm/arm-eabi-4.6/bin/arm-eabi-
 endif
+
+endif # ARCHV=aarch64
 
 # set default to nothing for native builds
 ifeq ($(HOSTARCH),$(ARCH))
@@ -885,6 +898,10 @@ ifdef CONFIG_RKCHIP_RK3128
 RKCHIP ?= RK3128
 endif
 
+ifdef CONFIG_RKCHIP_RK3368
+RKCHIP ?= RK3368
+endif
+
 RKCHIP ?= `sed -n "/CHIP=/s/CHIP=//p" RKBOOT.ini|tr -d '\r'`
 
 UBOOTVERSION := $(UBOOTVERSION)$(if $(RKCHIP),-$(RKCHIP))$(if $(RK_UBOOT_VERSION),-$(RK_UBOOT_VERSION))
@@ -894,6 +911,7 @@ RK_SUBFIX = $(if $(RK_UBOOT_VERSION),.$(RK_UBOOT_VERSION)).bin
 RKLoader_uboot.bin: u-boot.bin
 ifdef CONFIG_SECOND_LEVEL_BOOTLOADER
 	$(if $(CONFIG_MERGER_MINILOADER), ./tools/boot_merger ./tools/rk_tools/RKBOOT/$(RKCHIP)MINIALL.ini &&) \
+	$(if $(CONFIG_MERGER_TRUSTIMAGE), ./tools/trust_merger ./tools/rk_tools/RKTRUST/$(RKCHIP)TRUST.ini &&) \
 	./tools/loaderimage --pack u-boot.bin uboot.img
 else
 	./tools/boot_merger --subfix "$(RK_SUBFIX)" ./tools/rk_tools/RKBOOT/$(RKCHIP).ini

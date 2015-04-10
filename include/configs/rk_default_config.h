@@ -90,9 +90,10 @@
 #define CONFIG_SYS_ARM_CACHE_WRITETHROUGH
 
 
-/* irq config */
-#define CONFIG_USE_IRQ
-
+/* irq config, arch64 gic no using CONFIG_USE_IRQ */
+#if !defined(CONFIG_ARM64)
+	#define CONFIG_USE_IRQ
+#endif
 
 /* enable imprecise aborts check, default disable */
 #undef CONFIG_IMPRECISE_ABORTS_CHECK
@@ -132,8 +133,11 @@
 #define CONFIG_CMD_BOOTRK
 #define CONFIG_BOOTCOMMAND		"bootrk"
 
+#ifdef CONFIG_ARM64
+#define CONFIG_EXTRA_ENV_SETTINGS	"verify=n\0initrd_high=0xffffffffffffffff=n\0"
+#else
 #define CONFIG_EXTRA_ENV_SETTINGS	"verify=n\0initrd_high=0xffffffff=n\0"
-
+#endif
 
 /* env config */
 #define CONFIG_ENV_IS_IN_RK_STORAGE	1 /* Store ENV in rk storage only */
@@ -252,8 +256,18 @@
 #define CONFIG_RK_SDCARD_BOOT_EN
 #undef CONFIG_RK_UMS_BOOT_EN
 #ifdef CONFIG_SECOND_LEVEL_BOOTLOADER
-#define CONFIG_MERGER_MINILOADER
 #define CONFIG_RK_FLASH_BOOT_EN
+#endif /* CONFIG_SECOND_LEVEL_BOOTLOADER */
+
+
+/*
+ * merger bin enable config
+ */
+#ifdef CONFIG_SECOND_LEVEL_BOOTLOADER
+#define CONFIG_MERGER_MINILOADER
+#ifdef CONFIG_ARM64
+#define CONFIG_MERGER_TRUSTIMAGE
+#endif /* CONFIG_ARM64 */
 #endif /* CONFIG_SECOND_LEVEL_BOOTLOADER */
 
 

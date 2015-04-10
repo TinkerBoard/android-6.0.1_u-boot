@@ -120,7 +120,11 @@ static rk_boot_img_hdr * rk_load_image_from_ram(char *ram_addr,
 	char *ep;
 	void *kaddr, *raddr, *secaddr;
 
+#ifdef CONFIG_KERNEL_RUNNING_ADDR
+	kaddr = (void*)CONFIG_KERNEL_RUNNING_ADDR;
+#else
 	kaddr = (void*)CONFIG_KERNEL_LOAD_ADDR;
+#endif
 	raddr = (void*)(gd->arch.rk_boot_buf_addr);
 
 	addr = simple_strtoul(ram_addr, &ep, 16);
@@ -223,7 +227,11 @@ static rk_boot_img_hdr * rk_load_image_from_storage(const disk_partition_t* ptn,
 	content.load_addr = NULL;
 #endif
 
+#ifdef CONFIG_KERNEL_RUNNING_ADDR
+	kaddr = (void*)CONFIG_KERNEL_RUNNING_ADDR;
+#else
 	kaddr = (void*)CONFIG_KERNEL_LOAD_ADDR;
+#endif
 	raddr = (void*)(gd->arch.rk_boot_buf_addr);
 
 	hdr = memalign(ARCH_DMA_MINALIGN, blksz << 2);
@@ -489,6 +497,7 @@ static void rk_commandline_setenv(const char *boot_name, rk_boot_img_hdr *hdr, b
 	setenv("bootargs", command_line);
 #endif /* CONFIG_CMDLINE_TAG */
 }
+
 
 /* bootrk [ <addr> | <partition> ] */
 int do_bootrk(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
