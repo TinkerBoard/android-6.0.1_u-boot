@@ -428,11 +428,9 @@ int rk_lcdc_init(int lcdc_id)
 	struct lcdc_device *lcdc_dev = &rk32_lcdc;
 	u32 msk, val;
 
-#if defined(CONFIG_RKCHIP_RK3288)
 	// set vop qos to highest priority
-	writel(CPU_AXI_QOS_PRIORITY_LEVEL(2, 2), 0xffad0408);
-	writel(CPU_AXI_QOS_PRIORITY_LEVEL(2, 2), 0xffad0008);
-#endif
+	writel_relaxed(CPU_AXI_QOS_PRIORITY_LEVEL(2, 2), 0xffad0408);
+	writel_relaxed(CPU_AXI_QOS_PRIORITY_LEVEL(2, 2), 0xffad0008);
 
 	lcdc_dev->soc_type = gd->arch.chiptype;
 	lcdc_dev->id = lcdc_id;
