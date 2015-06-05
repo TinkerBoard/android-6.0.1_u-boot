@@ -29,7 +29,9 @@ int cleanup_before_linux(void)
 	/*
 	 * Turn off I-cache and invalidate it
 	 */
-//	icache_disable();
+#ifndef CONFIG_ICACHE_ENABLE_FOR_KERNEL
+	icache_disable();
+#endif
 	invalidate_icache_all();
 
 	/*
