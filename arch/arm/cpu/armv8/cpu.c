@@ -29,7 +29,7 @@ int cleanup_before_linux(void)
 	/*
 	 * Turn off I-cache and invalidate it
 	 */
-	icache_disable();
+//	icache_disable();
 	invalidate_icache_all();
 
 	/*
