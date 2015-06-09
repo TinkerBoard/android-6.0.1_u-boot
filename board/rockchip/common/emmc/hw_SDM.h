@@ -31,11 +31,13 @@ no message
 #define _SDM_H_
 
 #define SDM_CMD_RESENT_COUNT  (3)      //当读写出错时，重复发送的次数，用于读写出错处理
-#define SDM_CMD_ERROR_RETRY_COUNT   (3)      //命令回复出错时，重复发送的次数
+#define SDM_CMD_ERROR_RETRY_COUNT   (1)      //命令回复出错时，重复发送的次数
 
 #define SDM_INVALID_CARDID    (-1)           //无效的cardId
 #define SDM_WIDE_BUS_MODE     (1 << 0)       //for debug
 #define SDM_HIGH_SPEED_MODE   (1 << 1)       //for debug 
+#define SDM_DDR_SPEED_MODE    (1 << 2)       //for debug 
+#define SDM_HS200_SPEED_MODE   (1 << 3)       //for debug 
 
 /*
 #if ((SD_FPP_FREQ/1000) < (FREQ_HCLK_MAX/8))

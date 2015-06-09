@@ -106,7 +106,7 @@ uint32 GetMmcCLK(uint32 nSDCPort)
 	#error "PLS config platform for emmc clock get!"
 #endif
 	src_clk = src_clk / KHZ;
-	debug("GetMmcCLK: sd clk = %d\n", src_clk);
+	debug("GetMmcCLK: sd %d, clk = %d\n", nSDCPort,src_clk);
 	return src_clk;
 }
 
@@ -165,6 +165,26 @@ int SCUSelSDClk(uint32 sdmmcId, uint32 div)
 	return rkclk_set_mmc_clk_div(sdmmcId, div);
 }
 
+
+int32 SCUSetSDClkFreq(uint32 sdmmcId, uint32 freq)
+{
+#if defined(CONFIG_RK_MMC_DDR_MODE)
+	debug("SCUSetSDClkFreq: sd id = %d, freq = %d\n", sdmmcId, freq);
+	return rkclk_set_mmc_clk_freq(sdmmcId, freq);
+#else
+    return 0;
+#endif
+}
+
+int32 SCUSetTuning(uint32 sdmmcId, uint32 degree, uint32 DelayNum)
+{
+#if defined(CONFIG_RK_MMC_DDR_MODE)
+    debug("SCUSetTuning: degree = %d, DelayNum = %d\n", degree, DelayNum);
+    return rkclk_set_mmc_tuning(sdmmcId, degree, DelayNum);
+#else
+        return -1;
+#endif
+}
 
 void sdmmcGpioInit(uint32 ChipSel)
 {
