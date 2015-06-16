@@ -17,6 +17,24 @@ struct pmic_rk818 rk818;
 
 int support_dc_chg;
 
+enum rk818_regulator {
+	RK818_DCDC1=0,
+	RK818_DCDC2,
+	RK818_DCDC3,
+	RK818_DCDC4,
+	RK818_LDO1,
+	RK818_LDO2,
+	RK818_LDO3,
+	RK818_LDO4,
+	RK818_LDO5,
+	RK818_LDO6,
+	RK818_LDO7,
+	RK818_LDO8,
+	RK818_LDO9,
+	RK818_LDO10,
+	RK818_end
+};
+
 const static int buck_set_vol_base_addr[] = {
 	RK818_BUCK1_ON_REG,
 	RK818_BUCK2_ON_REG,
@@ -88,7 +106,29 @@ static int rk818_i2c_probe(u32 bus, u32 addr)
 	
 }
 
-static int rk818_regulator_enable(int num_regulator)
+int rk818_regulator_disable(int num_regulator)
+{
+
+	if (num_regulator < 4)
+		i2c_reg_write(RK818_I2C_ADDR, RK818_DCDC_EN_REG,
+			i2c_reg_read(RK818_I2C_ADDR, RK818_DCDC_EN_REG) &(~(1 << num_regulator))); //enable dcdc
+	else if (num_regulator == 12)
+		i2c_reg_write(RK818_I2C_ADDR, RK818_DCDC_EN_REG,
+			i2c_reg_read(RK818_I2C_ADDR,RK818_DCDC_EN_REG) &(~(1 << 5))); //enable ldo9
+	else if (num_regulator == 13)
+		i2c_reg_write(RK818_I2C_ADDR, RK818_DCDC_EN_REG,
+			i2c_reg_read(RK818_I2C_ADDR,RK818_DCDC_EN_REG) &(~(1 << 6))); //enable ldo10
+	else
+	 	i2c_reg_write(RK818_I2C_ADDR, RK818_LDO_EN_REG,
+			i2c_reg_read(RK818_I2C_ADDR,RK818_LDO_EN_REG) &(~(1 << (num_regulator -4)))); //enable ldo
+
+	debug("1 %s %d dcdc_en = %08x ldo_en =%08x\n", __func__, num_regulator, i2c_reg_read(RK818_I2C_ADDR,RK818_DCDC_EN_REG), i2c_reg_read(RK818_I2C_ADDR,RK818_LDO_EN_REG));
+
+	 return 0;
+}
+
+
+int rk818_regulator_enable(int num_regulator)
 {
 
 	if (num_regulator < 4)
@@ -299,4 +339,31 @@ void pmic_rk818_shut_down(void)
 	i2c_reg_write(rk818.pmic->hw.i2c.addr, RK818_DEVCTRL_REG, (reg |(0x1 <<0)));
 
 }
+
+void pmic_rk818_power_init(void){
+	rk818_regulator_disable(RK818_LDO1);
+	rk818_regulator_disable(RK818_LDO2);
+	rk818_regulator_disable(RK818_LDO8);
+}
+
+void pmic_rk818_power_on(void){
+	rk818_regulator_enable(RK818_LDO4);
+	rk818_regulator_enable(RK818_LDO6);
+	//rk818_regulator_enable(RK818_LDO9);
+	//rk818_regulator_enable(RK818_LDO10);
+	
+	//gpio_direction_output(LCD_EN_PIN,1);
+	// mipi wakeup need 120ms
+	//mdelay(120);
+}
+
+void pmic_rk818_power_off(void){
+	//gpio_direction_output(LCD_EN_PIN,0);
+
+	rk818_regulator_disable(RK818_LDO6);
+	rk818_regulator_disable(RK818_LDO4);	
+	//rk818_regulator_disable(RK818_LDO9);
+	//rk818_regulator_disable(RK818_LDO10);
+}
+
 

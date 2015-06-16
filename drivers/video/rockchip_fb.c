@@ -50,13 +50,6 @@ struct rk_fb_pwr_ctr_list {
 	struct pwr_ctr pwr_ctr;
 };
 
-struct rockchip_fb {
-	int node;
-	int lcdc_node;
-	int lcdc_id;
-	struct list_head pwrlist_head;
-};
-
 struct rockchip_fb rockchip_fb;
 
 vidinfo_t panel_info = {
@@ -511,7 +504,7 @@ void lcd_pandispaly(struct fb_dsp_info *info)
 
 void lcd_standby(int enable)
 {
-	rk_lcdc_standby(enable);
+	rk_lcdc_standby(enable);			
 }
 
 /* dummy function */

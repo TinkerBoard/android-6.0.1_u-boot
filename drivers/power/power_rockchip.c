@@ -13,6 +13,16 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+#if defined(CONFIG_POWER_RK818)
+#define CONFIG_RK818_SCREEN_ON_VOL_THRESD	3000
+#define CONFIG_RK818_SYSTEM_ON_VOL_THRESD	3600
+#define CONFIG_RK818_SYSTEM_ON_CAPACITY_THRESD  5
+
+	extern void pmic_rk818_power_init(void);
+	extern void pmic_rk818_power_on(void);
+	extern void pmic_rk818_power_off(void);	
+#endif
+
 #if defined(CONFIG_POWER_FG_ADC)
 extern int adc_battery_init(void);
 #endif
@@ -62,6 +72,20 @@ int get_power_bat_status(struct battery *battery)
 	return 0;
 }
 
+/*
+return 0: bat exist
+return 1: bat no exit
+*/
+int is_exist_battery(void)
+{
+	int ret;
+	struct battery battery;
+	memset(&battery,0, sizeof(battery));
+	ret = get_power_bat_status(&battery);
+	if (ret < 0)
+		return 0;
+	return battery.isexistbat;
+}
 
 /*
 return 0: no charger
@@ -108,7 +132,11 @@ int is_power_low(void)
 	ret = get_power_bat_status(&battery);
 	if (ret < 0)
 		return 0;
-	return (battery.voltage_uV < CONFIG_SYSTEM_ON_VOL_THRESD) ? 1:0;	
+	if(rockchip_pmic_id==PMIC_ID_RK818)
+		return ((battery.voltage_uV < CONFIG_RK818_SYSTEM_ON_VOL_THRESD) ||(battery.capacity<CONFIG_RK818_SYSTEM_ON_CAPACITY_THRESD))? 1:0;
+	else
+ 		return (battery.voltage_uV < CONFIG_SYSTEM_ON_VOL_THRESD) ? 1:0;
+
 }
 
 
@@ -300,4 +328,28 @@ void shut_down(void)
 			break;
 	}
 }
+
+// shutdown no use ldo
+void power_pmic_init(void){
+	
+#if defined(CONFIG_POWER_RK818)
+	pmic_rk818_power_init();
+#endif
+}
+
+// by wakeup open ldo
+void power_on_pmic(void){	
+#if defined(CONFIG_POWER_RK818)
+	pmic_rk818_power_on();
+#endif
+}
+
+
+// by wakeup close ldo
+void power_off_pmic(void){
+#if defined(CONFIG_POWER_RK818)
+	pmic_rk818_power_off();
+#endif		
+}
+
 

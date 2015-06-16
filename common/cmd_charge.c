@@ -34,6 +34,7 @@
 #include <lcd.h>
 #include <power/pmic.h>
 #include <resource.h>
+#include <asm/arch/rkplat.h>
 
 /*#define DEBUG*/
 #define LOGE(fmt, args...) printf(fmt "\n", ##args)
@@ -44,8 +45,8 @@
 #endif
 
 //screen timeouts.
-#define SCREEN_DIM_TIMEOUT          60000 //ms
-#define SCREEN_OFF_TIMEOUT          120000 //ms
+#define SCREEN_DIM_TIMEOUT          15000 //ms
+#define SCREEN_OFF_TIMEOUT          5000 //ms
 
 //screen brightness state.
 #define SCREEN_BRIGHT               0
@@ -67,17 +68,27 @@
 #define DEF_CHARGE_DESC_PATH		"charge_anim_desc.txt"
 #define DEFAULT_ANIM_DELAY			80000 //us
 
+#define BRIGHT_MAXLOW_BATTERY_CAPACITY 20
+
 extern int rkkey_power_state(void);
 extern int is_charging(void);
 extern int pmic_charger_setting(int current);
 extern void rk_backlight_ctrl(int brightness);
 extern void lcd_standby(int enable);
+extern uint32 rk_timer1_get_curr_count(void);
+extern int rk818_regulator_enable(int num_regulator);
+extern int rk818_regulator_disable(int num_regulator);
+extern void power_pmic_init(void);
+extern void power_on_pmic(void);
+extern void power_off_pmic(void);
 
 #ifdef CONFIG_POWER_FG_ADC
 u8 g_increment = 0;
 #define BIG_CHARGE_INCRE_TIME          100000
 #define LITTLE_CHARGE_INCRE_TIME       300000
 #endif
+
+int timer_interrupt_wakeup = 0;
 
 //return duration(ms).
 static inline unsigned int get_fix_duration(unsigned int base) {
@@ -193,6 +204,14 @@ int check_charging(void) {
 		return EXIT_SHUTDOWN;
 	}*/
 	get_power_bat_status(&batt_status);
+
+	// if no exist bat but charging 
+	if((batt_status.state_of_chrg)&&(!batt_status.isexistbat))
+	{
+		printf("charging but no exist batterry!.");
+		return EXIT_BOOT;
+	}
+	
 	if(!batt_status.state_of_chrg)
 	{
 		printf("pmic not charging.");
@@ -568,6 +587,52 @@ static inline void set_brightness(int brightness, screen_state* state) {
 	state->brightness = brightness;
 }
 
+#ifdef CONFIG_CHARGE_TIMER_WAKEUP
+#if defined(CONFIG_RKCHIP_RK3368)
+	#define RK_CHARGE_TIMER_BASE		(RKIO_TIMER0_6CH_PHYS+0x20)
+	#define RK_CHARGE_TIMER_IRQ		IRQ_TIMER0_6CH_1
+#else
+	#error "PLS config charge time wakeup for chip plat"
+#endif
+
+int timer1_init(uint64_t count)
+{
+	//1 s interrupt
+	writel(1*CONFIG_SYS_CLK_FREQ, RK_CHARGE_TIMER_BASE);
+	/* auto reload & enable the timer */
+	writel(0x05, RK_CHARGE_TIMER_BASE+0x10);
+
+	writel(0x01, RK_CHARGE_TIMER_BASE+0x18);
+
+	return 0;
+}
+
+void timer1_irq_init(void(*function)(void))
+{
+	irq_install_handler(RK_CHARGE_TIMER_IRQ, (interrupt_handler_t *)function, NULL);
+			/* default enable all gpio group interrupt */
+	irq_handler_enable(RK_CHARGE_TIMER_IRQ);
+}
+
+void timer1_irq_deinit(void)
+{
+	irq_handler_disable(RK_CHARGE_TIMER_IRQ);
+	irq_uninstall_handler(RK_CHARGE_TIMER_IRQ);
+}
+
+uint32 rk_timer1_get_curr_count(void)
+{
+	return readl(RK_CHARGE_TIMER_BASE+0x08);
+}
+
+void rk_timer1_isr(void){
+	//printf("rk_timer1_isr########\n");
+	timer_interrupt_wakeup = 1;
+	writel(0x01, RK_CHARGE_TIMER_BASE+0x18);
+}
+#endif /* CONFIG_CHARGE_TIMER_WAKEUP */
+
+
 int do_charge(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	pre_charge();
@@ -580,7 +645,8 @@ int do_charge(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	g_state.brightness = SCREEN_OFF;
 
 	unsigned int anim_time = 0;
-	int brightness = SCREEN_BRIGHT;
+	int brightness = SCREEN_DIM;
+	int brightness_status=0;
 	int key_state = KEY_NOT_PRESSED;
 	int exit_type = NOT_EXIT;
 
@@ -590,6 +656,15 @@ int do_charge(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	charge_start_time = get_timer(0);
 	debug("do_charge!!!!\n");
 	#endif
+
+#ifdef CONFIG_CHARGE_DEEP_SLEEP
+#ifdef CONFIG_CHARGE_TIMER_WAKEUP
+	//timer 1s wakeup cpu
+	timer1_init(CONFIG_SYS_CLK_FREQ);
+#endif
+	//close no use power
+	power_pmic_init();
+#endif /* CONFIG_CHARGE_DEEP_SLEEP */
 
 	/* enbale fb buffer flip */
 	lcd_enable_flip(true);
@@ -601,6 +676,17 @@ int do_charge(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			LOGD("should quit charge");
 			goto exit;
 		}
+		
+		if(!timer_interrupt_wakeup){
+			if(batt_status.capacity>BRIGHT_MAXLOW_BATTERY_CAPACITY){
+				brightness = SCREEN_BRIGHT;
+				brightness_status=1;
+			}else{
+				brightness_status=0;
+				brightness = SCREEN_DIM;
+			}
+		}
+			
 		#ifdef CONFIG_POWER_FG_ADC
 		charge_last_time = get_timer(charge_start_time);
 		if(adc_charge_status()==2){
@@ -625,10 +711,16 @@ int do_charge(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			if (idle_time > SCREEN_OFF_TIMEOUT) {
 				LOGD("screen off");
 				brightness = SCREEN_OFF;
+			}
+	#if 0
+			if (idle_time > SCREEN_OFF_TIMEOUT) {
+				LOGD("screen off");
+				brightness = SCREEN_OFF;
 			} else if (idle_time >= SCREEN_DIM_TIMEOUT) {
 				LOGD("screen dim");
 				brightness = SCREEN_DIM;
 			}
+	#endif
 		}
 
 		//step 3: check power key pressed state.
@@ -637,7 +729,11 @@ int do_charge(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			LOGD("key pressed state:%d", key_state);
 		}
 		if (key_state == KEY_SHORT_PRESSED) {
-			brightness = IS_BRIGHT(g_state.brightness)? SCREEN_OFF : SCREEN_BRIGHT;
+			if(brightness_status)
+				brightness = IS_BRIGHT(g_state.brightness)? SCREEN_OFF : SCREEN_BRIGHT;
+			else
+				brightness = IS_BRIGHT(g_state.brightness)? SCREEN_OFF : SCREEN_DIM;
+			
 #ifdef CONFIG_CHARGE_DEEP_SLEEP
 			if (IS_BRIGHT(brightness)) {
 				brightness = SCREEN_OFF;
@@ -657,12 +753,31 @@ int do_charge(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		if (!IS_BRIGHT(brightness)) {
 			//goto sleep, and wait for wakeup by power-key.
 			set_brightness(SCREEN_OFF, &g_state);
-			printf("wakeup gpio init and sleep.\n");
+			//printf("wakeup gpio init and sleep.\n");
+			timer_interrupt_wakeup = 0;
+			//close some ldo
+			power_off_pmic();
+#ifdef CONFIG_CHARGE_TIMER_WAKEUP
+			//timer enable
+			timer1_irq_init(rk_timer1_isr);
+#endif
 			rk_pm_wakeup_gpio_init();
 			rk_pm_enter(NULL);
 			rk_pm_wakeup_gpio_deinit();
-			printf("wakeup gpio deinit and wakeup.\n");
-			brightness = SCREEN_BRIGHT;
+#ifdef CONFIG_CHARGE_TIMER_WAKEUP
+			timer1_irq_deinit();
+#endif
+			//close some ldo
+  			power_on_pmic();
+			
+			mdelay(10);
+			if(!timer_interrupt_wakeup){
+				g_state.screen_on_time = 0;
+				if(brightness_status)
+					brightness = SCREEN_BRIGHT;
+				else
+					brightness = SCREEN_DIM;
+			}
 		}
 #endif
 
@@ -680,7 +795,7 @@ int do_charge(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		//step 6:set brightness state.
 		set_brightness(brightness, &g_state);
 
-		udelay(50000);// 50ms.
+		//udelay(100);// 50ms.
 	}
 exit:
 	/* disable fb buffer flip */
