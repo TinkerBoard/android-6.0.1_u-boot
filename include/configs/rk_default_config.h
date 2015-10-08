@@ -198,6 +198,10 @@
 #define CONFIG_RKDDR_PARAM_ADDR		(CONFIG_RAM_PHY_START + SZ_32M) /* rk ddr banks address and size */
 
 
+/* rk hdmi device information buffer (start: 128M - size: 8K) */
+#define CONFIG_RKHDMI_PARAM_ADDR	CONFIG_RAM_PHY_END
+
+
 /*
  * SDRAM Memory Map
  * Even though we use two CS all the memory
