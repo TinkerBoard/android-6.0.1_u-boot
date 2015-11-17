@@ -169,6 +169,9 @@ int pwm_regulator_init(void)
 {
 	int ret;
 
+	if (!gd->fdt_blob)
+		return -1;
+
 	ret = pwm_regulator_parse_dt(gd->fdt_blob);
 	if (ret < 0)
 		return ret;
