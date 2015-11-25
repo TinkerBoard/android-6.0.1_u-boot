@@ -381,6 +381,8 @@ static void FW_GetChipVer(void)
 	chip_info[0] = 0x33303341; // 303A
 #elif defined(CONFIG_RKCHIP_RK3126) || defined(CONFIG_RKCHIP_RK3128)
 	chip_info[0] = 0x33313241; // 312A
+#elif defined(CONFIG_RKCHIP_RK3228)
+	chip_info[0] = 0x33323241; /* 322A */
 #endif
 	memcpy((void *)current_urb->buffer, (void *)chip_info, 16);
 	current_urb->actual_length = 16;
