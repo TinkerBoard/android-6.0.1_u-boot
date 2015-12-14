@@ -15,7 +15,7 @@
 /* if rk dmac define */
 #ifdef CONFIG_RK_DMAC
 
-#define RK_DMA_PL330_VERSION	"1.2"
+#define RK_DMA_PL330_VERSION	"1.3"
 
 #define rk_dma_dev_err(...) \
     do\
@@ -801,6 +801,7 @@ int rk_dma_request(enum dma_ch id,
 	ch->rqcfg.dcctl = DCCTRL0; /* Noncacheable and nonbufferable */
 	ch->rqcfg.privileged = 0;
 	ch->rqcfg.insnaccess = 0;
+	ch->rqcfg.pcfg = &dmac->pi->pcfg;
 
 	/* Set invalid direction */
 	ch->req[0].rqtype = DEVTODEV;
