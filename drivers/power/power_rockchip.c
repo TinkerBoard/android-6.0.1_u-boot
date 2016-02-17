@@ -36,6 +36,7 @@ static const char * const fg_names[] = {
 	"CW201X_FG",
 	"RICOH619_FG",
 	"RK818_FG",
+	"RK816_FG",
 	"RT5025_FG",
 	"RK-ADC-FG",
 	"RT5036_FG",
@@ -246,6 +247,12 @@ int pmic_init(unsigned char  bus)
 	if (ret >= 0) {
 		set_rockchip_pmic_id(PMIC_ID_RK818);
 		printf("pmic:rk818\n");
+		return 0;
+	}
+	ret = pmic_rk816_init(bus);
+	if (ret >= 0) {
+		set_rockchip_pmic_id(PMIC_ID_RK816);
+		printf("pmic:rk816\n");
 		return 0;
 	}
 #endif
