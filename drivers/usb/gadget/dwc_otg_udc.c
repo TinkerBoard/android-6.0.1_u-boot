@@ -352,7 +352,8 @@ uint32_t GetVbus(void)
 		/* delay more than 1ms, waiting for usb phy init */
 		mdelay(3);
 	}
-#elif defined(CONFIG_RKCHIP_RK3126) || defined(CONFIG_RKCHIP_RK3128) || defined(CONFIG_RKCHIP_RK3368)
+#elif defined(CONFIG_RKCHIP_RK3126) || defined(CONFIG_RKCHIP_RK3128) \
+		|| defined(CONFIG_RKCHIP_RK3368) || defined(CONFIG_RKCHIP_RK3366)
 	if (grf_readl(GRF_UOC0_CON0) & (0x01 << 0)) {
 		/* exit suspend */
 		grf_writel(((0x1 << 0) << 16), GRF_UOC0_CON0);
@@ -1042,6 +1043,16 @@ void usbphy_tunning(void)
 	grf_writel(0x00030001, GRF_UOC0_CON5);
 	mdelay(10);
 	grf_writel(0x00030002, GRF_UOC0_CON5);
+#endif
+#if defined(CONFIG_RKCHIP_RK3366)
+	/* open HS pre-emphasize to increase HS slew rate for each port */
+	grf_writel(0xffff851f, GRF_USBPHY_CON0);
+	grf_writel(0xffff68c8, GRF_USBPHY_CON7);
+	grf_writel(0xffff851f, GRF_USBPHY_CON12);
+	grf_writel(0xffff68c8, GRF_USBPHY_CON19);
+
+	/* compensation current tuning reference relate to ODT and etc */
+	grf_writel(0xffff026e, GRF_USBPHY_CON3);
 #endif
 }
 /* Turn on the USB connection by enabling the pullup resistor */

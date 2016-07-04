@@ -168,8 +168,12 @@ int board_fbt_key_pressed(void)
 {
 	uint32 boot_rockusb = 0, boot_recovery = 0, boot_fastboot = 0;
 	enum fbt_reboot_type frt = FASTBOOT_REBOOT_UNKNOWN;
-	int vbus = GetVbus();
+	int vbus = 0;
 	int ir_keycode = 0;
+
+#ifdef CONFIG_CMD_ROCKUSB
+	vbus = GetVbus();
+#endif
 
 #ifdef CONFIG_RK_KEY
 	checkKey((uint32 *)&boot_rockusb, (uint32 *)&boot_recovery, (uint32 *)&boot_fastboot);
@@ -441,6 +445,7 @@ void board_fbt_preboot(void)
 		int node = fdt_path_offset(gd->fdt_blob, "/fb");
 		g_logo_on_state = fdtdec_get_int(gd->fdt_blob, node, "rockchip,uboot-logo-on", 0);
 	}
+	gd->uboot_logo = g_logo_on_state;
 	printf("read logo on state from dts [%d]\n", g_logo_on_state);
 
 	if (g_logo_on_state != 0) {

@@ -8,13 +8,56 @@
 
 /*******************register definition**********************/
 struct vop_device rk322x_vop;
-
+#if defined(CONFIG_RKCHIP_RK3399)
+extern int rk32_edp_enable(vidinfo_t * vid);
+extern int rk32_mipi_enable(vidinfo_t * vid);
+extern int rk32_dsi_enable(void);
+extern int rk32_dsi_sync(void);
+extern int rk32_dsi_disable(void);
+#endif
 #ifndef pr_info
 #define pr_info(args...)  debug(args)
 #endif
 #ifndef pr_err
 #define  pr_err(args...)  debug(args)
 #endif
+
+#if defined(CONFIG_RKCHIP_RK3399)
+static const u32 csc_r2y_bt709_full_10[12] = {
+	0x00bb, 0x0275, 0x003f, 0x10200,
+	0xff99, 0xfea5, 0x01c2, 0x80200,
+	0x01c2, 0xfe68, 0xffd7, 0x80200,
+};
+
+static void vop_load_csc_table(struct vop_device *vop_dev, u32 offset,
+			       const u32 *table)
+{
+	u32 csc_val;
+
+	csc_val = table[1] << 16 | table[0];
+	vop_writel(vop_dev, offset, csc_val);
+	csc_val = table[4] << 16 | table[2];
+	vop_writel(vop_dev, offset + 4, csc_val);
+	csc_val = table[6] << 16 | table[5];
+	vop_writel(vop_dev, offset + 8, csc_val);
+	csc_val = table[9] << 16 | table[8];
+	vop_writel(vop_dev, offset + 0xc, csc_val);
+	csc_val = table[10];
+	vop_writel(vop_dev, offset + 0x10, csc_val);
+	csc_val = table[3];
+	vop_writel(vop_dev, offset + 0x14, csc_val);
+	csc_val = table[7];
+	vop_writel(vop_dev, offset + 0x18, csc_val);
+	csc_val = table[11];
+	vop_writel(vop_dev, offset + 0x1c, csc_val);
+}
+
+#define LOAD_CSC(dev, mode, table, win_id) \
+		vop_load_csc_table(dev, \
+				   WIN0_YUV2YUV_##mode + 0x60 * win_id, \
+				   table)
+#endif
+
 static int vop_vop_csc_mode(struct vop_device *vop_dev,
 			    struct fb_dsp_info *fb_info,
 			    vidinfo_t *vid)
@@ -631,6 +674,7 @@ static int win0_set_par(struct vop_device *vop_dev,
 			struct fb_dsp_info *fb_info,
 			vidinfo_t *vid)
 {
+	uint64_t val;
 	struct rk_lcdc_win win;
 	struct rk_screen *screen = vop_dev->screen;
 	u32 y_addr = fb_info->yaddr;
@@ -669,6 +713,13 @@ static int win0_set_par(struct vop_device *vop_dev,
 
 	vop_win_0_1_reg_update(vop_dev, &win, fb_info->layer_id);
 	vop_writel(vop_dev, WIN0_YRGB_MST, y_addr);
+#if defined(CONFIG_RKCHIP_RK3399)
+	if (vop_dev->overlay_mode == VOP_YUV_DOMAIN) {
+		val = V_WIN0_YUV2YUV_R2Y_EN(1);
+		vop_msk_reg(vop_dev, YUV2YUV_WIN, val);
+		LOAD_CSC(vop_dev, R2Y, csc_r2y_bt709_full_10, 0);
+	}
+#endif
 
 	return 0;
 }
@@ -937,15 +988,43 @@ int rk_lcdc_load_screen(vidinfo_t *vid)
 	vop_dev->overlay_mode = VOP_RGB_DOMAIN;
 
 	switch (screen->face) {
+		case OUT_P565:
+			face = OUT_P565;
+			val = V_DITHER_DOWN_EN(1) | V_DITHER_UP_EN(1) |
+				V_PRE_DITHER_DOWN_EN(1) |
+				V_DITHER_DOWN_SEL(1) | V_DITHER_DOWN_MODE(0);
+			break;
+		case OUT_P666:
+			face = OUT_P666;
+			val = V_DITHER_DOWN_EN(1) | V_DITHER_UP_EN(1) |
+				V_PRE_DITHER_DOWN_EN(1) |
+				V_DITHER_DOWN_SEL(1) | V_DITHER_DOWN_MODE(1);
+			break;
+		case OUT_D888_P565:
+			face = OUT_P888;
+			val = V_DITHER_DOWN_EN(1) | V_DITHER_UP_EN(1) |
+				V_PRE_DITHER_DOWN_EN(1) |
+				V_DITHER_DOWN_SEL(1) | V_DITHER_DOWN_MODE(0);
+			break;
+		case OUT_D888_P666:
+			face = OUT_P888;
+			val = V_DITHER_DOWN_EN(1) | V_DITHER_UP_EN(1) |
+				V_PRE_DITHER_DOWN_EN(1) |
+				V_DITHER_DOWN_SEL(1) | V_DITHER_DOWN_MODE(1);
+			break;
 	case OUT_P888:
+#ifdef CONFIG_RKCHIP_RK322X
 		if (rk_get_cpu_version())
 			face = OUT_P101010;
 		else
+#endif
 			face = OUT_P888;
-		val = V_DITHER_DOWN_EN(0) | V_DITHER_UP_EN(0)
-			| V_PRE_DITHER_DOWN_EN(1);
+		val = V_DITHER_DOWN_EN(0) | V_DITHER_UP_EN(1)
+				| V_PRE_DITHER_DOWN_EN(1) |
+				V_DITHER_DOWN_SEL(0) | V_DITHER_DOWN_MODE(0);
 		break;
 	case OUT_YUV_420:
+#ifdef CONFIG_RKCHIP_RK322X
 		if (rk_get_cpu_version()) {
 			face = OUT_YUV_420;
 			dclk_ddr = 1;
@@ -957,7 +1036,17 @@ int rk_lcdc_load_screen(vidinfo_t *vid)
 				"This chip can't supported screen face[%d]\n",
 				screen->face);
 		break;
+#else
+		face = OUT_YUV_420;
+		dclk_ddr = 1;
+		val = V_DITHER_DOWN_EN(0) | V_DITHER_UP_EN(1) |
+			V_PRE_DITHER_DOWN_EN(1) |
+			V_DITHER_DOWN_SEL(0) |
+			V_DITHER_DOWN_MODE(0);
+		break;
+#endif
 	case OUT_YUV_420_10BIT:
+#ifdef CONFIG_RKCHIP_RK322X
 		if (rk_get_cpu_version()) {
 			face = OUT_YUV_420;
 			dclk_ddr = 1;
@@ -969,7 +1058,31 @@ int rk_lcdc_load_screen(vidinfo_t *vid)
 				"This chip can't supported screen face[%d]\n",
 				screen->face);
 		break;
+#else
+		face = OUT_YUV_420;
+		dclk_ddr = 1;
+		val = V_DITHER_DOWN_EN(0) | V_DITHER_UP_EN(1) |
+			V_PRE_DITHER_DOWN_EN(0) |
+			V_DITHER_DOWN_SEL(0) |
+			V_DITHER_DOWN_MODE(0);
+		break;
+#endif
+		case OUT_YUV_422:
+			face = OUT_YUV_422;
+			val = V_DITHER_DOWN_EN(0) | V_DITHER_UP_EN(1) |
+				V_PRE_DITHER_DOWN_EN(1) |
+				V_DITHER_DOWN_SEL(0) |
+				V_DITHER_DOWN_MODE(0);
+			break;
+		case OUT_YUV_422_10BIT:
+			face = OUT_YUV_422;
+			val = V_DITHER_DOWN_EN(0) | V_DITHER_UP_EN(1) |
+				V_PRE_DITHER_DOWN_EN(0) |
+				V_DITHER_DOWN_SEL(0) |
+				V_DITHER_DOWN_MODE(0);
+			break;
 	case OUT_P101010:
+#ifdef CONFIG_RKCHIP_RK322X
 		if (rk_get_cpu_version()) {
 			face = OUT_P101010;
 			val = V_DITHER_DOWN_EN(0) | V_DITHER_UP_EN(1)
@@ -980,6 +1093,14 @@ int rk_lcdc_load_screen(vidinfo_t *vid)
 				"This chip can't supported screen face[%d]\n",
 				screen->face);
 		break;
+#else
+		face = OUT_P101010;
+		val = V_DITHER_DOWN_EN(0) | V_DITHER_UP_EN(1) |
+			V_PRE_DITHER_DOWN_EN(0) |
+			V_DITHER_DOWN_SEL(0) |
+			V_DITHER_DOWN_MODE(0);
+		break;
+#endif
 	default:
 		dev_err(vop_dev->dev, "un supported interface!\n");
 		break;
@@ -998,23 +1119,94 @@ int rk_lcdc_load_screen(vidinfo_t *vid)
 			val |= V_SW_TVE_MODE(0);
 		vop_msk_reg(vop_dev, SYS_CTRL, val);
 		break;
-	default:
-		/*
-		 * rk322x only support hdmi or tvout, default set hdmi output
-		 * if screen type is unknown.
-		 */
-		dev_err(vop_dev->dev, "un supported interface!\n");
 	case SCREEN_HDMI:
+#if defined(CONFIG_RKCHIP_RK3399)
+		if ((vop_dev->soc_type == CONFIG_RK3399) &&
+		    ((screen->face == OUT_P888) ||
+		     (screen->face == OUT_P101010))) {
+			if (vop_dev->id == 0)
+				face = OUT_P101010; /*RGB 10bit output*/
+			else
+				face = OUT_P888;
+		}
+#endif
 		val = V_HDMI_OUT_EN(1) | V_SW_UV_OFFSET_EN(0);
 		vop_msk_reg(vop_dev, SYS_CTRL, val);
+			val = V_HDMI_HSYNC_POL(screen->pin_hsync) |
+				V_HDMI_VSYNC_POL(screen->pin_vsync) |
+				V_HDMI_DEN_POL(screen->pin_den) |
+				V_HDMI_DCLK_POL(screen->pin_dclk);
+			/*hsync vsync den dclk polo,dither */
+			vop_msk_reg(vop_dev, DSP_CTRL1, val);
 		break;
+	case SCREEN_RGB:
+	case SCREEN_LVDS:
+		val = V_RGB_OUT_EN(1);
+		vop_msk_reg(vop_dev, SYS_CTRL, val);
+		break;
+	case SCREEN_MIPI:
+		val = V_MIPI_OUT_EN(1);
+		vop_msk_reg(vop_dev, SYS_CTRL, val);
+			val = V_MIPI_HSYNC_POL(screen->pin_hsync) |
+				V_MIPI_VSYNC_POL(screen->pin_vsync) |
+				V_MIPI_DEN_POL(screen->pin_den) |
+				V_MIPI_DCLK_POL(screen->pin_dclk);
+			/*hsync vsync den dclk polo,dither */
+			vop_msk_reg(vop_dev, DSP_CTRL1, val);
+		break;
+	case SCREEN_DUAL_MIPI:
+		val = V_MIPI_OUT_EN(1) | V_MIPI_DUAL_CHANNEL_EN(1);
+		vop_msk_reg(vop_dev, SYS_CTRL, val);
+			val = V_MIPI_HSYNC_POL(screen->pin_hsync) |
+				V_MIPI_VSYNC_POL(screen->pin_vsync) |
+				V_MIPI_DEN_POL(screen->pin_den) |
+				V_MIPI_DCLK_POL(screen->pin_dclk);
+			/*hsync vsync den dclk polo,dither */
+			vop_msk_reg(vop_dev, DSP_CTRL1, val);
+		break;
+	case SCREEN_EDP:
+#if defined(CONFIG_RKCHIP_RK3399)
+		if ((vop_dev->soc_type == CONFIG_RK3399) &&
+		    (vop_dev->id == 0))
+			face = OUT_P101010;
+#endif
+		val = V_EDP_OUT_EN(1);
+		vop_msk_reg(vop_dev, SYS_CTRL, val);
+			val = V_EDP_HSYNC_POL(screen->pin_hsync) |
+				V_EDP_VSYNC_POL(screen->pin_vsync) |
+				V_EDP_DEN_POL(screen->pin_den) |
+				V_EDP_DCLK_POL(screen->pin_dclk);
+			/*hsync vsync den dclk polo,dither */
+			vop_msk_reg(vop_dev, DSP_CTRL1, val);
+		break;
+#if defined(CONFIG_RKCHIP_RK3399)
+		case SCREEN_DP:
+			dclk_ddr = 0;
+			if ((vop_dev->soc_type == CONFIG_RK3399) &&
+			    ((screen->face == OUT_P888) ||
+			     (screen->face == OUT_P101010))) {
+				if (vop_dev->id == 0)
+					face = OUT_P101010;
+				else
+					face = OUT_P888;
+			}
+			val = V_DP_OUT_EN(1);
+			vop_msk_reg(vop_dev, SYS_CTRL, val);
+			val = V_DP_HSYNC_POL(screen->pin_hsync) |
+				V_DP_VSYNC_POL(screen->pin_vsync) |
+				V_DP_DEN_POL(screen->pin_den) |
+				V_DP_DCLK_POL(screen->pin_dclk);
+			/*hsync vsync den dclk polo,dither */
+			vop_msk_reg(vop_dev, DSP_CTRL1, val);
+			break;
+#endif
+	default:
+		dev_err(vop_dev->dev, "un supported interface[%d]!\n",
+			screen->type);
+		break;
+
+
 	}
-	val = V_HDMI_HSYNC_POL(screen->pin_hsync) |
-		V_HDMI_VSYNC_POL(screen->pin_vsync) |
-		V_HDMI_DEN_POL(screen->pin_den) |
-		V_HDMI_DCLK_POL(screen->pin_dclk);
-	/*hsync vsync den dclk polo,dither */
-	vop_msk_reg(vop_dev, DSP_CTRL1, val);
 
 	if (screen->color_mode == COLOR_RGB)
 		vop_dev->overlay_mode = VOP_RGB_DOMAIN;
@@ -1030,11 +1222,16 @@ int rk_lcdc_load_screen(vidinfo_t *vid)
 		V_DSP_BLANK_EN(0) | V_DSP_BLACK_EN(0) |
 		V_DSP_X_MIR_EN(screen->x_mirror) |
 		V_DSP_Y_MIR_EN(screen->y_mirror);
-	if (screen->pixelrepeat)
-		val |= V_SW_CORE_DCLK_SEL(1);
+		val |= V_SW_CORE_DCLK_SEL(!!screen->pixelrepeat);
 	if (screen->mode.vmode & FB_VMODE_INTERLACED)
 		val |= V_SW_HDMI_CLK_I_SEL(1);
+		else
+			val |= V_SW_HDMI_CLK_I_SEL(0);
 	vop_msk_reg(vop_dev, DSP_CTRL0, val);
+		if (screen->mode.vmode & FB_VMODE_INTERLACED)
+			vop_msk_reg(vop_dev, SYS_CTRL1, V_REG_DONE_FRM(1));
+		else
+			vop_msk_reg(vop_dev, SYS_CTRL1, V_REG_DONE_FRM(0));
 	/* BG color */
 	if (vop_dev->overlay_mode == VOP_YUV_DOMAIN)
 		val = V_DSP_BG_BLUE(0x80) | V_DSP_BG_GREEN(0x10) |
@@ -1047,7 +1244,14 @@ int rk_lcdc_load_screen(vidinfo_t *vid)
 	vop_bcsh_path_sel(vop_dev);
 	vop_config_timing(vop_dev, screen);
 	vop_cfg_done(vop_dev);
-
+#if defined(CONFIG_RKCHIP_RK3399)
+	if (vid->screen_type == SCREEN_EDP) {
+		rk32_edp_enable(vid);
+	} else if ((vid->screen_type == SCREEN_MIPI) ||
+		   (vid->screen_type == SCREEN_DUAL_MIPI)) {
+		rk32_mipi_enable(vid);
+	}
+#endif
 	return 0;
 }
 
@@ -1056,7 +1260,18 @@ int rk_lcdc_load_screen(vidinfo_t *vid)
 void rk_lcdc_standby(int enable)
 {
 	struct vop_device *vop_dev = &rk322x_vop;
-
+#if defined(CONFIG_RKCHIP_RK3399)
+#if defined(CONFIG_RK32_DSI)
+	if (((panel_info.screen_type == SCREEN_MIPI) ||
+	     (panel_info.screen_type == SCREEN_DUAL_MIPI))) {
+		if (enable == 0) {
+			rk32_dsi_enable();
+		} else if (enable == 1) {
+			rk32_dsi_disable();
+		}
+	}
+#endif
+#endif
 	vop_msk_reg(vop_dev, SYS_CTRL, V_VOP_STANDBY_EN(!!enable));
 	vop_cfg_done(vop_dev);
 }
@@ -1109,8 +1324,14 @@ int rk_lcdc_init(int vop_id)
 		rk32_vop_parse_dt(vop_dev, gd->fdt_blob);
 #endif
 	vop_dev->screen = kzalloc(sizeof(*vop_dev->screen), GFP_KERNEL);
+#ifdef 	CONFIG_RKCHIP_RK322X
 	vop_dev->regs = RKIO_VOP_PHYS;
-
+#else
+	if (vop_dev->id == 0)
+		vop_dev->regs = RKIO_VOP_BIG_PHYS;
+	else
+		vop_dev->regs = RKIO_VOP_LITE_PHYS;
+#endif
 	vop_vop_read_def_cfg(vop_dev);
 
 	val =  V_AUTO_GATING_EN(0) | V_VOP_STANDBY_EN(0) |

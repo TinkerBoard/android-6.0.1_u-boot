@@ -278,15 +278,9 @@ int rk_fb_parse_dt(struct rockchip_fb *rk_fb, const void *blob)
 	int node;
 	int phandle;
 
-	/* logo_on flag has been checked in the function board_fbt_preboot() */
-#if 0
-	int logo_on;
 	node = fdt_node_offset_by_compatible(blob, 0, COMPAT_ROCKCHIP_FB);
-
-	logo_on = fdtdec_get_int(blob, node, "rockchip,uboot-logo-on", 0);
-	if (logo_on <= 0)
-		return -EPERM;
-#endif
+	panel_info.dual_lcd_enabled =
+		fdtdec_get_int(blob, node, "rockchip,disp-mode", 0);
 
 	/* 0: for fdt running time save */
 #if 0
@@ -294,7 +288,17 @@ int rk_fb_parse_dt(struct rockchip_fb *rk_fb, const void *blob)
 					  "native-mode", -1);
 	node = fdt_node_offset_by_phandle(blob, phandle);
 #else
+#if defined(CONFIG_RKCHIP_RK3399)
+	int screen_node;
+	screen_node = fdt_node_offset_by_compatible(blob, 0, "rockchip,screen");
+	if (screen_node < 0) {
+		debug("Can't find rk_screen device node");
+		return screen_node;
+	}
+	node = fdt_subnode_offset(blob, screen_node, "display-timings");
+#else
 	node = fdt_path_offset(blob, "/display-timings");
+#endif
 	if (node < 0) {
 		printf("rk fb dt: can't find node '/display-timings'\n");
 		return -ENODEV;
@@ -480,6 +484,14 @@ void lcd_ctrl_init(void *lcdbase)
 
 	panel_info.logo_rgb_mode = RGB565;
 	rk_fb_pwr_enable(fb);
+#if defined(CONFIG_RKCHIP_RK3399)
+	if ((panel_info.screen_type == SCREEN_HDMI) ||
+	    (panel_info.dual_lcd_enabled == NO_DUAL) ||
+	    (panel_info.dual_lcd_enabled == ONE_DUAL))
+		rkclk_lcdc_dclk_pll_sel(panel_info.lcdc_id, 0);
+	else
+		rkclk_lcdc_dclk_pll_sel(panel_info.lcdc_id, 1);
+#endif
 	panel_info.real_freq = rkclk_lcdc_clk_set(panel_info.lcdc_id,
 						  panel_info.vl_freq);
 	rk_lcdc_init(panel_info.lcdc_id);
@@ -516,7 +528,7 @@ void lcd_pandispaly(struct fb_dsp_info *info)
 
 void lcd_standby(int enable)
 {
-	rk_lcdc_standby(enable);			
+	rk_lcdc_standby(enable);
 }
 
 /* dummy function */

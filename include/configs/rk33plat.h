@@ -1,7 +1,7 @@
 /*
  * Configuation settings for the rk33xx chip platform.
  *
- * (C) Copyright 2008-2016 Fuzhou Rockchip Electronics Co., Ltd
+ * (C) Copyright 2008 Fuzhou Rockchip Electronics Co., Ltd
  * Peter, Software Engineering, <superpeter.cai@gmail.com>.
  *
  * SPDX-License-Identifier:	GPL-2.0+
@@ -13,11 +13,26 @@
 #include <asm/arch/io.h>
 
 
-/* rk gic400 is GICV2 */
-#define CONFIG_GICV2
-#define GICD_BASE			RKIO_GICD_PHYS
-#define GICC_BASE			RKIO_GICC_PHYS
+/* gic and rk timer version */
+#if defined(CONFIG_RKCHIP_RK3368) || defined(CONFIG_RKCHIP_RK3366)
+	#define CONFIG_GICV2
+	#define CONFIG_RKTIMER_V2
+#elif defined(CONFIG_RKCHIP_RK3399)
+	#define CONFIG_GICV3
+	#define CONFIG_RKTIMER_V3
+#else
+	#error "PLS config rk chip for GIC and TIMER version!"
+#endif
 
+/* gic base */
+#if defined(CONFIG_GICV2)
+	#define GICD_BASE		RKIO_GICD_PHYS
+	#define GICC_BASE		RKIO_GICC_PHYS
+#elif defined(CONFIG_GICV3)
+	#define GICC_BASE		RKIO_GICC_PHYS
+	#define GICD_BASE		RKIO_GICD_PHYS
+	#define GICR_BASE		RKIO_GICR_PHYS
+#endif /* CONFIG_GICV2 */
 
 /* Generic Timer Definitions */
 #define COUNTER_FREQUENCY		CONFIG_SYS_CLK_FREQ_CRYSTAL
@@ -80,8 +95,46 @@
 	#undef CONFIG_RK_PL330_DMAC
 #endif
 
+#if defined(CONFIG_RKCHIP_RK3366)
+	#define CONFIG_RKTIMER_INCREMENTER
+
+	#undef CONFIG_RK_MCU
+	#define CONFIG_SECUREBOOT_CRYPTO
+	#define CONFIG_SECUREBOOT_SHA256
+	#undef CONFIG_RK_TRUSTOS
+
+	#undef CONFIG_MERGER_TRUSTIMAGE
+
+	#undef CONFIG_RK_UMS_BOOT_EN
+
+	#undef CONFIG_RK_PL330_DMAC
+	#undef CONFIG_LCD
+	#undef CONFIG_PM_SUBSYSTEM
+#endif
+
+
+#if defined(CONFIG_RKCHIP_RK3399)
+	#define CONFIG_SECUREBOOT_SHA256
+	#define CONFIG_RKTIMER_INCREMENTER
+	#define CONFIG_RK_SDHCI_BOOT_EN
+
+	#undef CONFIG_RK_SDMMC_BOOT_EN
+	#undef CONFIG_RK_FLASH_BOOT_EN
+	#undef CONFIG_RK_UMS_BOOT_EN
+
+	#undef CONFIG_RK_MCU
+	#undef CONFIG_PERILP_MCU
+	#undef CONFIG_PMU_MCU
+	#undef CONFIG_RK_PL330_DMAC
+	#if (defined(CONFIG_CMD_ROCKUSB) || defined(CONFIG_CMD_FASTBOOT))
+		#undef CONFIG_RK_UDC
+		#define CONFIG_RK_DWC3_UDC
+	#endif
+#endif
+
 /* fpga board configure */
 #ifdef CONFIG_FPGA_BOARD
+	#define DEBUG
 	#define CONFIG_BOARD_DEMO
 	#define CONFIG_RK_IO_TOOL
 
@@ -91,6 +144,7 @@
 	#define CONFIG_SYS_L2CACHE_OFF
 	#define CONFIG_RKTIMER_INCREMENTER
 
+	#undef CONFIG_RK_PL330_DMAC
 	#undef CONFIG_RK_MCU
 	#undef CONFIG_SECUREBOOT_CRYPTO
 	#undef CONFIG_MERGER_MINILOADER
@@ -113,11 +167,12 @@
 #endif
 
 /* ARMv8 RSA key in ram, MiniLoader copy RSA KEY to fixed address */
-#if defined(CONFIG_SECOND_LEVEL_BOOTLOADER) && defined(CONFIG_SECUREBOOT_CRYPTO)
-#define CONFIG_SECURE_RSA_KEY_IN_RAM
-#define CONFIG_SECURE_RSA_KEY_ADDR	(CONFIG_RKNAND_API_ADDR + SZ_2K)
+#if defined(CONFIG_SECUREBOOT_CRYPTO)
+#if defined(CONFIG_SECOND_LEVEL_BOOTLOADER) && defined(CONFIG_NORMAL_WORLD)
+	#define CONFIG_SECURE_RSA_KEY_IN_RAM
+	#define CONFIG_SECURE_RSA_KEY_ADDR	(CONFIG_RKNAND_API_ADDR + SZ_2K)
+#endif /* CONFIG_NORMAL_WORLD && CONFIG_SECOND_LEVEL_BOOTLOADER */
 #endif /* CONFIG_SECUREBOOT_CRYPTO */
-
 
 /* mod it to enable console commands.	*/
 #define CONFIG_BOOTDELAY		0
@@ -127,10 +182,30 @@
 	#define CONFIG_RKEFUSE_V2
 #endif
 
+
+/* sdhci config */
+#ifdef CONFIG_RK_SDHCI_BOOT_EN
+	/* general sdhci driver */
+	#undef CONFIG_MMC
+	#undef CONFIG_GENERIC_MMC
+	#undef CONFIG_PARTITIONS
+	#undef CONFIG_SDHCI
+	#undef CONFIG_RK_SDHCI
+
+	/* rk arasan sdhci driver */
+	#define CONFIG_RK_AR_SDHCI
+#endif
+
+
 /* mmc using dma */
 #define CONFIG_RK_MMC_DMA
 #define CONFIG_RK_MMC_IDMAC	/* internal dmac */
 #undef CONFIG_RK_MMC_DDR_MODE	/* mmc using ddr mode */
+
+#if (defined(CONFIG_CMD_ROCKUSB) || defined(CONFIG_CMD_FASTBOOT))
+	#define CONFIG_USBD_MANUFACTURER	"Rockchip"
+	#define CONFIG_USBD_PRODUCT_NAME	"rk30xx"
+#endif
 
 /* more config for rockusb */
 #ifdef CONFIG_CMD_ROCKUSB
@@ -142,6 +217,10 @@
 #define CONFIG_USBD_VENDORID			0x2207
 #if defined(CONFIG_RKCHIP_RK3368)
 	#define CONFIG_USBD_PRODUCTID_ROCKUSB	0x330A
+#elif defined(CONFIG_RKCHIP_RK3366)
+	#define CONFIG_USBD_PRODUCTID_ROCKUSB	0x330B
+#elif defined(CONFIG_RKCHIP_RK3399)
+	#define CONFIG_USBD_PRODUCTID_ROCKUSB	0x330C
 #else
 	#error "PLS config rk chip for rockusb PID!"
 #endif
@@ -153,8 +232,7 @@
 #ifdef CONFIG_CMD_FASTBOOT
 
 #define CONFIG_USBD_PRODUCTID_FASTBOOT	0x0006
-#define CONFIG_USBD_MANUFACTURER	"Rockchip"
-#define CONFIG_USBD_PRODUCT_NAME	"rk30xx"
+
 
 #define FASTBOOT_PRODUCT_NAME		"fastboot" /* Fastboot product name */
 
@@ -162,6 +240,11 @@
 #define CONFIG_FASTBOOT_LOG_SIZE	(SZ_2M)
 
 #endif /* CONFIG_CMD_FASTBOOT */
+
+#ifdef CONFIG_RK_DWC3_UDC
+	#define CONFIG_USB_DWC3
+	#define CONFIG_USB_DWC3_GADGET
+#endif
 
 
 #ifdef CONFIG_RK_UMS_BOOT_EN
@@ -175,18 +258,21 @@
  *	RKUSB_UMS_BOOT_FROM_DWC2_OTG
  *	RKUSB_UMS_BOOT_FROM_DWC2_HOST
  *	RKUSB_UMS_BOOT_FROM_EHCI_HOST1
+ *	RKUSB_UMS_BOOT_FROM_EHCI_HOST2
  *
  * First define the host controller here
  */
 #undef RKUSB_UMS_BOOT_FROM_DWC2_OTG
 #undef RKUSB_UMS_BOOT_FROM_DWC2_HOST
 #undef RKUSB_UMS_BOOT_FROM_EHCI_HOST1
+#undef RKUSB_UMS_BOOT_FROM_EHCI_HOST2
 
 
 /* Check UMS Boot Host define */
 #define RKUSB_UMS_BOOT_CNT (defined(RKUSB_UMS_BOOT_FROM_DWC2_OTG) + \
 			    defined(RKUSB_UMS_BOOT_FROM_DWC2_HOST) + \
-			    defined(RKUSB_UMS_BOOT_FROM_EHCI_HOST1))
+			    defined(RKUSB_UMS_BOOT_FROM_EHCI_HOST1) + \
+			    defined(RKUSB_UMS_BOOT_FROM_EHCI_HOST2))
 
 #if (RKUSB_UMS_BOOT_CNT == 0)
 	#error "PLS Select a USB host controller!"
@@ -199,7 +285,8 @@
  * USB Host support, default no using
  * please first check plat if you want to using usb host
  */
-#if defined(RKUSB_UMS_BOOT_FROM_EHCI_HOST1)
+#if defined(RKUSB_UMS_BOOT_FROM_EHCI_HOST1) ||\
+	defined(RKUSB_UMS_BOOT_FROM_EHCI_HOST2)
 	/* ehci host */
 	#define CONFIG_USB_EHCI
 	#define CONFIG_USB_EHCI_RK
@@ -218,8 +305,16 @@
 
 /* more config for display */
 #ifdef CONFIG_LCD
+#if defined(CONFIG_RKCHIP_RK3399)
+#define CONFIG_RK322X_FB
+#define CONFIG_DIRECT_LOGO
+#define CONFIG_OF_BOARD_SETUP
+#undef CONFIG_RK_TVE
+#endif
 
+#if defined(CONFIG_RKCHIP_RK3368)
 #define CONFIG_RK33_FB
+#endif
 
 #ifdef CONFIG_RK_HDMI
 #define CONFIG_RK_HDMIV2
@@ -231,6 +326,7 @@
 #endif
 
 #define CONFIG_RK32_DSI
+#define CONFIG_RK3399_EDP
 
 #undef CONFIG_UBOOT_CHARGE
 

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2008-2015 Fuzhou Rockchip Electronics Co., Ltd
+ * (C) Copyright 2008 Fuzhou Rockchip Electronics Co., Ltd
  * Peter, Software Engineering, <superpeter.cai@gmail.com>.
  *
  * SPDX-License-Identifier:	GPL-2.0+
@@ -12,6 +12,10 @@
 
 #if defined(CONFIG_RKCHIP_RK3368)
 	#include "iomux-rk3368.c"
+#elif defined(CONFIG_RKCHIP_RK3366)
+	#include "iomux-rk3366.c"
+#elif defined(CONFIG_RKCHIP_RK3399)
+	#include "iomux-rk3399.c"
 #else
 	#error "PLS config iomux-rkxx.c!"
 #endif

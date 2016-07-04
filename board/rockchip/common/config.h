@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2008-2016 Fuzhou Rockchip Electronics Co., Ltd
+ * (C) Copyright 2008 Fuzhou Rockchip Electronics Co., Ltd
  * Peter, Software Engineering, <superpeter.cai@gmail.com>.
  *
  * SPDX-License-Identifier:	GPL-2.0+
@@ -31,6 +31,9 @@ DECLARE_GLOBAL_DATA_PTR;
 
 
 /* rk sdmmc boot config */
+#ifdef CONFIG_RK_SDHCI_BOOT_EN
+	#define RK_SDHCI_BOOT_EN
+#endif
 #ifdef CONFIG_RK_SDMMC_BOOT_EN
 	#define RK_SDMMC_BOOT_EN
 #endif
@@ -43,6 +46,8 @@ DECLARE_GLOBAL_DATA_PTR;
 	#define EMMC_NOT_USED_BOOT_PART
 #endif
 
+/* loader save information for kernel in ram */
+#define BOOTINFO_RAM_BASE	RKIO_BOOTINFO_BASE
 
 #define NANDC_BASE_ADDR         RKIO_NANDC_BASE
 #define SDMMC_BASE_ADDR		RKIO_SDMMC_BASE
@@ -93,7 +98,6 @@ DECLARE_GLOBAL_DATA_PTR;
 #define MIN(x, y)  min(x, y)
 #define MAX(x, y)  max(x, y)
 
-
 #ifdef DEBUG_FLASH
 #define	PRINTF		printf
 #else
@@ -138,6 +142,10 @@ DECLARE_GLOBAL_DATA_PTR;
 #if defined(CONFIG_RK_SDMMC_BOOT_EN) || defined(CONFIG_RK_SDCARD_BOOT_EN)
 #include "emmc/sdmmc_config.h"
 #include "mediaboot/sdmmcBoot.h"
+#endif
+
+#ifdef CONFIG_RK_SDHCI_BOOT_EN
+#include "mediaboot/sdhciBoot.h"
 #endif
 
 #ifdef CONFIG_RK_FLASH_BOOT_EN

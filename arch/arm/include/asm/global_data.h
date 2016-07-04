@@ -48,7 +48,7 @@ struct arch_global_data {
 	unsigned long	aclk_bus_rate_hz;
 	unsigned long	pclk_bus_rate_hz;
 	unsigned long	hclk_bus_rate_hz;
-#elif defined(CONFIG_RKCHIP_RK3368) || defined(CONFIG_RKCHIP_RK322X)
+#elif defined(CONFIG_RKCHIP_RK3368) || defined(CONFIG_RKCHIP_RK322X) || defined(CONFIG_RKCHIP_RK3366)
 	unsigned long	aclk_periph_rate_hz;
 	unsigned long	pclk_periph_rate_hz;
 	unsigned long	hclk_periph_rate_hz;
@@ -64,6 +64,17 @@ struct arch_global_data {
 	unsigned long	aclk_periph_rate_hz;
 	unsigned long	pclk_periph_rate_hz;
 	unsigned long	hclk_periph_rate_hz;
+#elif defined(CONFIG_RKCHIP_RK3399)
+	unsigned long	aclk_periph_h_rate_hz;
+	unsigned long	pclk_periph_h_rate_hz;
+	unsigned long	hclk_periph_h_rate_hz;
+
+	unsigned long	aclk_periph_l0_rate_hz;
+	unsigned long	pclk_periph_l0_rate_hz;
+	unsigned long	hclk_periph_l0_rate_hz;
+
+	unsigned long	pclk_periph_l1_rate_hz;
+	unsigned long	hclk_periph_l1_rate_hz;
 #else
 	#error "PLS config chiptype for clock!"
 #endif
