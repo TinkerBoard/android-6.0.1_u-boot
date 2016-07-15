@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2008-2016 Fuzhou Rockchip Electronics Co., Ltd
+ * (C) Copyright 2008 Fuzhou Rockchip Electronics Co., Ltd
  * Peter, Software Engineering, <superpeter.cai@gmail.com>.
  *
  * SPDX-License-Identifier:	GPL-2.0+
@@ -16,8 +16,11 @@
 #include <asm/io.h>
 #include <asm/errno.h>
 
-#include "typedef.h"
-#include "cpu.h"
+#include <asm/rk-common/typedef.h>
+#include <asm/rk-common/cpu.h>
+#include <asm/rk-common/uart.h>
+#include <asm/rk-common/usbhost.h>
+
 #include "io.h"
 #include "pmu.h"
 #include "grf.h"
@@ -27,10 +30,9 @@
 #include "iomux.h"
 
 #include "clock.h"
-#include "uart.h"
 
 #ifdef CONFIG_PM_SUBSYSTEM
-#include "pm.h"
+#include <asm/rk-common/pm.h>
 #endif
 
 #ifdef CONFIG_RK_PL330_DMAC

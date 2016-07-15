@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2008-2016 Fuzhou Rockchip Electronics Co., Ltd
+ * (C) Copyright 2008 Fuzhou Rockchip Electronics Co., Ltd
  * Peter, Software Engineering, <superpeter.cai@gmail.com>.
  *
  * SPDX-License-Identifier:	GPL-2.0+
@@ -100,7 +100,6 @@
 #define UART_BIT6		6
 #define UART_BIT7		7
 #define UART_BIT8		8
-
 
 
 /*		config rk uart input clock
