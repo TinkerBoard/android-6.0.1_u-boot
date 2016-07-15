@@ -75,6 +75,9 @@ void board_fbt_set_reboot_type(enum fbt_reboot_type frt)
 		case FASTBOOT_REBOOT_RECOVERY_WIPE_DATA:
 			boot = BOOT_WIPEDATA;
 			break;
+		case FASTBOOT_REBOOT_NORECOVER:
+			boot = BOOT_NORECOVER;
+			break;
 		default:
 			if (frt != FASTBOOT_REBOOT_NORMAL)
 				printf("unknown reboot type %d\n", frt);
@@ -117,6 +120,10 @@ enum fbt_reboot_type board_fbt_get_reboot_type(void)
 			frt = FASTBOOT_REBOOT_FASTBOOT;
 			break;
 #endif
+		case BOOT_NORECOVER:
+			printf("reboot no recover.\n");
+			frt = FASTBOOT_REBOOT_NORECOVER;
+			break;
 		case BOOT_RECOVER:
 			printf("reboot recover.\n");
 			frt = FASTBOOT_REBOOT_RECOVERY;
