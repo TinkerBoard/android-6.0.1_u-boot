@@ -61,6 +61,7 @@ int board_fbt_is_charging(void)
 void board_fbt_set_reboot_type(enum fbt_reboot_type frt)
 {
 	int boot = BOOT_NORMAL;
+
 	switch(frt) {
 		case FASTBOOT_REBOOT_BOOTLOADER:
 			boot = BOOT_LOADER;
@@ -75,12 +76,12 @@ void board_fbt_set_reboot_type(enum fbt_reboot_type frt)
 			boot = BOOT_WIPEDATA;
 			break;
 		default:
-			printf("unknown reboot type %d\n", frt);
-			frt = BOOT_NORMAL;
+			if (frt != FASTBOOT_REBOOT_NORMAL)
+				printf("unknown reboot type %d\n", frt);
 			break;
 	}
 
-	ISetLoaderFlag(SYS_LOADER_REBOOT_FLAG|boot);
+	ISetLoaderFlag(SYS_LOADER_REBOOT_FLAG | boot);
 }
 
 enum fbt_reboot_type board_fbt_get_reboot_type(void)
@@ -90,45 +91,51 @@ enum fbt_reboot_type board_fbt_get_reboot_type(void)
 	uint32_t loader_flag = IReadLoaderFlag();
 	int reboot_mode = loader_flag ? (loader_flag & 0xFF) : BOOT_NORMAL;
 
-	//set to non-0.
+	/* Feedback reboot mode to the kernel. */
 	ISetLoaderFlag(SYS_KERNRL_REBOOT_FLAG | reboot_mode);
 
-	if(SYS_LOADER_ERR_FLAG == loader_flag)
-	{
+	if (SYS_LOADER_ERR_FLAG == loader_flag) {
 		loader_flag = SYS_LOADER_REBOOT_FLAG | BOOT_LOADER;
 		reboot_mode = BOOT_LOADER;
 	}
-	if((loader_flag&0xFFFFFF00) == SYS_LOADER_REBOOT_FLAG)
-	{
-		switch(reboot_mode) {
-			case BOOT_NORMAL:
-				frt = FASTBOOT_REBOOT_NORMAL;
-				break;
-			case BOOT_LOADER:
+
+	if ((loader_flag & 0xFFFFFF00) == SYS_LOADER_REBOOT_FLAG) {
+		switch (reboot_mode) {
+		case BOOT_NORMAL:
+			printf("reboot normal.\n");
+			frt = FASTBOOT_REBOOT_NORMAL;
+			break;
+		case BOOT_LOADER:
 #ifdef CONFIG_CMD_ROCKUSB
-				printf("reboot to rockusb.\n");
-				do_rockusb(NULL, 0, 0, NULL);
+			printf("reboot rockusb.\n");
+			do_rockusb(NULL, 0, 0, NULL);
 #endif
-				break;
+			break;
 #ifdef CONFIG_CMD_FASTBOOT
-			case BOOT_FASTBOOT:
-				frt = FASTBOOT_REBOOT_FASTBOOT;
-				break;
+		case BOOT_FASTBOOT:
+			printf("reboot fastboot.\n");
+			frt = FASTBOOT_REBOOT_FASTBOOT;
+			break;
 #endif
-			case BOOT_RECOVER:
-				frt = FASTBOOT_REBOOT_RECOVERY;
-				break;
-			case BOOT_WIPEDATA:
-			case BOOT_WIPEALL:
-				frt = FASTBOOT_REBOOT_RECOVERY_WIPE_DATA;
-				break;
-			case BOOT_CHARGING:
-				frt = FASTBOOT_REBOOT_CHARGE;
-				break;
-			default:
-				printf("unsupport rk boot type %d\n", reboot_mode);
-				break;
+		case BOOT_RECOVER:
+			printf("reboot recover.\n");
+			frt = FASTBOOT_REBOOT_RECOVERY;
+			break;
+		case BOOT_WIPEDATA:
+		case BOOT_WIPEALL:
+			printf("reboot wipe data.\n");
+			frt = FASTBOOT_REBOOT_RECOVERY_WIPE_DATA;
+			break;
+		case BOOT_CHARGING:
+			printf("reboot charge.\n");
+			frt = FASTBOOT_REBOOT_CHARGE;
+			break;
+		default:
+			printf("unsupport reboot type %d\n", reboot_mode);
+			break;
 		}
+	} else {
+		printf("normal boot.\n");
 	}
 
 	/* Normal boot mode */
