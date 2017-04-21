@@ -120,13 +120,8 @@ uint32 SdmmcInit(uint32 ChipSel)
 		if (ChipSel == 0) {
 			if (gIdDataBuf[0] == 0xFCDC8C3B) {
 				gSdCardInfoTbl[ChipSel].FwPartOffset = SD_CARD_FW_PART_OFFSET;
-				if (0 == gIdDataBuf[128 + 104 / 4]) { /* sd¿¨Éý¼¶ */
-					gsdboot_mode = SDMMC_SDCARD_UPDATE;
-					PRINT_E("SDCard Update.\n");
-				} else if (1 == gIdDataBuf[128 + 104 / 4]) { /* sd ¿¨ÔËÐÐ */
 					gsdboot_mode = SDMMC_SDCARD_BOOT;
 					PRINT_E("SDCard Boot.\n");
-				}
 			} else {
 				gsdboot_mode = 0;
 				rk_iomux_sdcard_restore();
