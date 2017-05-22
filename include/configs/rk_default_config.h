@@ -393,6 +393,9 @@
 /* rk display module */
 #ifdef CONFIG_LCD
 
+/*tinker board dsi panel mcu*/
+#define CONFIG_TINKER_MCU
+
 #define CONFIG_RK_FB
 #ifndef CONFIG_PRODUCT_BOX
 #define CONFIG_RK_PWM_BL

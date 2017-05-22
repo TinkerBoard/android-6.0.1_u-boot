@@ -25,6 +25,7 @@
 #include <asm/arch/rkplat.h>
 #include <lcd.h>
 #include "../transmitter/mipi_dsi.h"
+#include <i2c.h>
 #endif
 
 #ifdef CONFIG_RK32_DSI
@@ -174,6 +175,26 @@ static void rk_mipi_screen_cmd_init(struct mipi_screen *screen)
 int rk_mipi_screen(void) 
 {
 	u8 dcs[16] = {0}, rk_dsi_num;
+
+#ifdef CONFIG_TINKER_MCU
+	char val = 0, panel_connected = 0;
+	u32 mcu_addr = 0x45;
+
+	i2c_set_bus_num(3);
+	i2c_init(CONFIG_SYS_I2C_SPEED, 0);
+
+	if(i2c_probe(mcu_addr) == 0) {
+		msleep(500);
+		val = i2c_reg_read(mcu_addr, 0x80);
+
+		if(val == 0xC3) {
+			panel_connected = 1;
+			printf("tinker mcu connect success\n");
+		} else
+			printf("%s, tinker mcu connect fail, val: 0x%X\n", __func__, val);
+	}
+#endif
+
 	rk_dsi_num = gmipi_screen->mipi_dsi_num;
 	if(gmipi_screen->screen_init == 0){
 		rk_mipi_screen_pwr_enable(gmipi_screen);
@@ -228,6 +249,17 @@ int rk_mipi_screen(void)
 			dsi_enable_hs_clk(1, 1);
 		}
 
+#ifdef CONFIG_TINKER_MCU
+		//init panel
+		if(panel_connected) {
+			i2c_reg_write(mcu_addr, 0x85, 0x00);
+			msleep(200);
+			i2c_reg_write(mcu_addr, 0x85, 0x01);
+			msleep(200);
+			i2c_reg_write(mcu_addr, 0x81, 0x04);
+		}
+#endif
+
 		dsi_enable_video_mode(0,0);
 		if(rk_dsi_num == 2){
 			dsi_enable_video_mode(1,0);
@@ -249,6 +281,12 @@ int rk_mipi_screen(void)
 		if(rk_dsi_num == 2){
 			dsi_enable_video_mode(1,1);
 		} 
+
+#ifdef CONFIG_TINKER_MCU
+		//enable backlight
+		if(panel_connected)
+			i2c_reg_write(mcu_addr, 0x86, 0xFF);
+#endif
 	}
 	
 	MIPI_SCREEN_DBG("++++++++++++++++%s:%d\n", __func__, __LINE__);
