@@ -172,27 +172,15 @@ static void rk_mipi_screen_cmd_init(struct mipi_screen *screen)
 
 }
 
+#ifdef CONFIG_TINKER_MCU
+extern int g_panel_connected;
+#endif
 int rk_mipi_screen(void) 
 {
 	u8 dcs[16] = {0}, rk_dsi_num;
 
 #ifdef CONFIG_TINKER_MCU
-	char val = 0, panel_connected = 0;
 	u32 mcu_addr = 0x45;
-
-	i2c_set_bus_num(3);
-	i2c_init(CONFIG_SYS_I2C_SPEED, 0);
-
-	if(i2c_probe(mcu_addr) == 0) {
-		msleep(500);
-		val = i2c_reg_read(mcu_addr, 0x80);
-
-		if(val == 0xC3) {
-			panel_connected = 1;
-			printf("tinker mcu connect success\n");
-		} else
-			printf("%s, tinker mcu connect fail, val: 0x%X\n", __func__, val);
-	}
 #endif
 
 	rk_dsi_num = gmipi_screen->mipi_dsi_num;
@@ -251,7 +239,7 @@ int rk_mipi_screen(void)
 
 #ifdef CONFIG_TINKER_MCU
 		//init panel
-		if(panel_connected) {
+		if(g_panel_connected) {
 			i2c_reg_write(mcu_addr, 0x85, 0x00);
 			msleep(200);
 			i2c_reg_write(mcu_addr, 0x85, 0x01);
@@ -284,7 +272,7 @@ int rk_mipi_screen(void)
 
 #ifdef CONFIG_TINKER_MCU
 		//enable backlight
-		if(panel_connected)
+		if(g_panel_connected)
 			i2c_reg_write(mcu_addr, 0x86, 0xFF);
 #endif
 	}

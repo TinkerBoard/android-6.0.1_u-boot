@@ -14,6 +14,7 @@
 #include <fdt_support.h>
 #include <bmp_logo.h>
 #include <asm/arch/rkplat.h>
+#include <i2c.h>
 
 #include "rockchip_fb.h"
 #if defined(CONFIG_RK1000_TVE)
@@ -33,6 +34,7 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define GPIO		0
 #define REGULATOR	1
+#define msleep(a) udelay(a * 1000)
 
 struct pwr_ctr {
 	char name[32];
@@ -272,7 +274,9 @@ int rk_fb_pwr_disable(struct rockchip_fb *fb)
 	return 0;
 }
 
-
+#ifdef CONFIG_TINKER_MCU
+int g_panel_connected = 0;
+#endif
 int rk_fb_parse_dt(struct rockchip_fb *rk_fb, const void *blob)
 {
 	int node;
@@ -303,8 +307,37 @@ int rk_fb_parse_dt(struct rockchip_fb *rk_fb, const void *blob)
 		printf("rk fb dt: can't find node '/display-timings'\n");
 		return -ENODEV;
 	}
+
+#ifdef CONFIG_TINKER_MCU
+	char val = 0;
+	u32 mcu_addr = 0x45;
+
+	i2c_set_bus_num(3);
+	i2c_init(CONFIG_SYS_I2C_SPEED, 0);
+
+	if(i2c_probe(mcu_addr) == 0) {
+		msleep(500);
+		val = i2c_reg_read(mcu_addr, 0x80);
+
+		if(val == 0xC3) {
+			g_panel_connected = 1;
+			printf("tinker mcu connect success\n");
+		} else
+			printf("%s, tinker mcu connect fail, val: 0x%X\n", __func__, val);
+	} else
+		printf("tinker panel doesn't connected\n");
+
+	if(g_panel_connected) {
+		phandle = fdt_getprop_u32_default_node(blob, node, 0, "native-mode", -1);
+		node = fdt_node_offset_by_phandle_node(blob, node, phandle);
+	} else {
+		node = fdt_path_offset(blob, "/display-timings/timing1");
+	}
+#else
 	phandle = fdt_getprop_u32_default_node(blob, node, 0, "native-mode", -1);
 	node = fdt_node_offset_by_phandle_node(blob, node, phandle);
+#endif
+
 #endif
 	if (node <= 0) {
 		printf("rk fb dt: can't get device node for display-timings\n");
