@@ -163,12 +163,12 @@ static MEM_FUN_T *memFunTab[] =
 	&UMSFunOp,
 #endif
 
-#if defined(RK_SDMMC_BOOT_EN) || defined(RK_SDHCI_BOOT_EN)
-	&emmcFunOp,
-#endif
-
 #ifdef RK_SDCARD_BOOT_EN
 	&sd0FunOp,
+#endif
+
+#if defined(RK_SDMMC_BOOT_EN) || defined(RK_SDHCI_BOOT_EN)
+	&emmcFunOp,
 #endif
 
 #ifdef RK_FLASH_BOOT_EN
