@@ -13,6 +13,9 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define COMPAT_ROCKCHIP_DRAM "rockchip,rk322x-dram"
 
+int g_asus_ram_id = -1;
+EXPORT_SYMBOL(g_asus_ram_id);
+
 struct trust_parameter {
 	uint32_t version;
 	uint32_t checksum;
@@ -135,6 +138,17 @@ int dram_init(void)
 
 	gd->arch.ddr_end = (unsigned long)end;
 	debug("DDR End Address: 0x%08lx\n", gd->arch.ddr_end);
+
+    // According to HW designed, it'll adjust setting of CMA size.
+    if( gd->arch.ddr_end == 0x40000000){
+        g_asus_ram_id = 1;
+    }
+    else
+    {
+        g_asus_ram_id = 0;
+    }
+    debug("ram id = %d \n",g_asus_ram_id);
+    // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 #endif
 	return 0;
 }

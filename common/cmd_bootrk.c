@@ -45,6 +45,9 @@ extern bool is_rk81x_fg_init(void);
 extern int rkimage_load_image(rk_boot_img_hdr *hdr,
 		const disk_partition_t *boot_ptn, const disk_partition_t *kernel_ptn);
 
+extern int g_asus_ram_id;
+
+
 /* Section for Android bootimage format support
  * Refer:
  * http://android.git.kernel.org/?p=platform/system/core.git;a=blob;f=mkbootimg/bootimg.h
@@ -495,7 +498,10 @@ static void rk_commandline_setenv(const char *boot_name, rk_boot_img_hdr *hdr, b
 		}
 	}
 
-	command_line[sizeof(command_line) - 1] = 0;
+    snprintf(command_line, sizeof(command_line),
+			 "%s asus.ramid=%d", command_line, g_asus_ram_id);
+
+    command_line[sizeof(command_line) - 1] = 0;
 
 	setenv("bootargs", command_line);
 #endif /* CONFIG_CMDLINE_TAG */
