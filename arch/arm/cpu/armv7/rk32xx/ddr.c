@@ -140,8 +140,13 @@ int dram_init(void)
 	debug("DDR End Address: 0x%08lx\n", gd->arch.ddr_end);
 
     // According to HW designed, it'll adjust setting of CMA size.
-    if( gd->arch.ddr_end == 0x40000000){
+    if( gd->arch.ddr_end == 0x40000000)
+    {
         g_asus_ram_id = 1;
+    }
+    else if( gd->arch.ddr_end == 0x80000000)
+    {
+        g_asus_ram_id = 2;
     }
     else
     {
