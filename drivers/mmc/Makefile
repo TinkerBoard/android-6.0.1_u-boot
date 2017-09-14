@@ -40,3 +40,4 @@ else
 obj-$(CONFIG_GENERIC_MMC) += mmc_write.o
 endif
 obj-$(CONFIG_MVEBU_MMC) += mvebu_mmc.o
+obj-$(CONFIG_MMC_RK) += rkemmc.o

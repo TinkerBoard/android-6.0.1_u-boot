@@ -1695,10 +1695,12 @@ __weak int cpu_mmc_init(bd_t *bis)
 	return -1;
 }
 
+extern int rk_mmc_init(void);
+
 /* board-specific MMC initializations. */
-__weak int board_mmc_init(bd_t *bis)
+int board_mmc_init(bd_t *bis)
 {
-	return -1;
+	return rk_mmc_init();
 }
 
 #if !defined(CONFIG_SPL_BUILD) || defined(CONFIG_SPL_LIBCOMMON_SUPPORT)

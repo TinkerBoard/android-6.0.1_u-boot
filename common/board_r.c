@@ -639,6 +639,30 @@ static int initr_ide(void)
 }
 #endif
 
+#if defined(CONFIG_USB_GADGET) && defined(CONFIG_USB_GADGET_DWC2_OTG)
+#include <usb.h>
+#include <usb/dwc2_udc.h>
+
+static struct dwc2_plat_otg_data rk3288_otg_data = {
+	.rx_fifo_sz	= 512,
+	.np_tx_fifo_sz	= 16,
+	.tx_fifo_sz	= 128,
+	.regs_otg		= 0xff580000,
+	.phy_of_node	= 22524,
+	.regs_phy	= 0xff770320,
+};
+
+int board_usb_init(int index, enum usb_init_type init)
+{
+	return dwc2_udc_probe(&rk3288_otg_data);
+}
+
+int board_usb_cleanup(int index, enum usb_init_type init)
+{
+	return 0;
+}
+#endif
+
 #if defined(CONFIG_PRAM) || defined(CONFIG_LOGBUFFER)
 /*
  * Export available size of memory for Linux, taking into account the
