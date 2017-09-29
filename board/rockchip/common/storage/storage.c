@@ -163,12 +163,12 @@ static MEM_FUN_T *memFunTab[] =
 	&UMSFunOp,
 #endif
 
-#ifdef RK_SDCARD_BOOT_EN
-	&sd0FunOp,
-#endif
-
 #if defined(RK_SDMMC_BOOT_EN) || defined(RK_SDHCI_BOOT_EN)
 	&emmcFunOp,
+#endif
+
+#ifdef RK_SDCARD_BOOT_EN
+	&sd0FunOp,
 #endif
 
 #ifdef RK_FLASH_BOOT_EN
@@ -181,6 +181,7 @@ static MEM_FUN_T *memFunTab[] =
 int32 StorageInit(void)
 {
 	uint32 memdev;
+	disk_partition_t *info = NULL;
 
 	memset((uint8*)&g_FlashInfo, 0, sizeof(g_FlashInfo));
 	for(memdev=0; memdev<MAX_MEM_DEV; memdev++)
@@ -191,6 +192,17 @@ int32 StorageInit(void)
 			memFunTab[memdev]->Valid = 1;
 			StorageReadFlashInfo((uint8*)&g_FlashInfo);
 			vendor_storage_init();
+			// Try to get valid Android partition
+			load_disk_partitions();
+			info = get_disk_partition(MISC_NAME);
+
+			if (!info){
+				printf("Cannot find valid partition!!!\n");
+				continue;
+			}
+			else
+				printf("Find valid partition MISC.\n");
+
 			return 0;
 		}
 	}
