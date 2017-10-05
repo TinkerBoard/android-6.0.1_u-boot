@@ -235,7 +235,7 @@ int gpio_pull_updown(unsigned gpio, enum GPIOPullType type)
 {
 	struct rk_gpio_bank *bank = rk_gpio_get_bank(gpio);
 	void __iomem *base;
-	u32 val;
+	u32 val, tmp;
 
 	if (bank == NULL) {
 		return -1;
@@ -303,12 +303,14 @@ int gpio_pull_updown(unsigned gpio, enum GPIOPullType type)
 		if (gpio < (8+8+3)) { /* gpio0_a0-a8, gpio0_b0-b8, gpio0_c0-c2 */
 			base = (void __iomem *)(RKIO_PMU_PHYS + PMU_GPIO0A_PULL + ((gpio / 8) * 4));
 			gpio = (gpio % 8) * 2;
-			__raw_writel((0x3 << (16 + gpio)) | (val << gpio), base);
+			tmp = __raw_readl(base);
+			__raw_writel((tmp&~(0x03<<gpio)) | (0x3 << (16 + gpio)) | (val << gpio), base);
 		}
 	} else { /* gpio1-gpio8, grf control */
 		base = (void __iomem *)((RKIO_GRF_PHYS + (GRF_GPIO1D_P - 0xC) + (bank->id - 1) * 16) + ((gpio / 8) * 4));
-		gpio = (7 - (gpio % 8)) * 2;
-		__raw_writel((0x3 << (16 + gpio)) | (val << gpio), base);
+		gpio = (gpio % 8) * 2;
+		tmp = __raw_readl(base);
+		__raw_writel((tmp&~(0x03<<gpio))|(0x03<<(16 + gpio))|(val<<gpio), base);
 	}
 #elif defined(CONFIG_RKCHIP_RK3368) || defined(CONFIG_RKCHIP_RK3366)
 	/*

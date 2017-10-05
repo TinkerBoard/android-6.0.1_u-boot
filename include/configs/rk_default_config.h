@@ -365,6 +365,7 @@
 
 /* rk gpio module */
 #define CONFIG_RK_GPIO
+#define CONFIG_RK_GPIO_EXT_FUNC
 
 /* rk iomux module */
 #define CONFIG_RK_IOMUX
