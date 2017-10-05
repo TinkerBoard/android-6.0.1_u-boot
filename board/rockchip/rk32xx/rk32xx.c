@@ -17,6 +17,19 @@
 
 #include "../common/config.h"
 
+enum project_id {
+	TinkerBoardS = 0,
+	TinkerBoard  = 7,
+};
+
+enum pcb_id {
+	SR,
+	ER,
+	PR,
+};
+
+extern bool force_ums;
+
 DECLARE_GLOBAL_DATA_PTR;
 static ulong get_sp(void)
 {
@@ -161,6 +174,48 @@ static void board_init_adjust_env(void)
 		debug("board init saveenv.\n");
 		saveenv();
 #endif
+	}
+}
+
+void check_force_enter_ums_mode(void)
+{
+	enum pcb_id pcbid;
+	enum project_id projectid;
+
+	// enable projectid pull down and set it to input
+	gpio_pull_updown(GPIO_BANK2|GPIO_A1, GPIOPullUp);
+	gpio_pull_updown(GPIO_BANK2|GPIO_A2, GPIOPullUp);
+	gpio_pull_updown(GPIO_BANK2|GPIO_A3, GPIOPullUp);
+	gpio_direction_input(GPIO_BANK2|GPIO_A1);
+	gpio_direction_input(GPIO_BANK2|GPIO_A2);
+	gpio_direction_input(GPIO_BANK2|GPIO_A3);
+
+	// set pcbid to input
+	gpio_direction_input(GPIO_BANK2|GPIO_B0);
+
+	// disable SDP pull up/down and set it to input
+	gpio_pull_updown(GPIO_BANK6|GPIO_A5, PullDisable);
+	gpio_direction_input(GPIO_BANK6|GPIO_A5);
+
+	mdelay(10);
+
+	// read project id
+	projectid = gpio_get_value(GPIO_BANK2|GPIO_A1) | gpio_get_value(GPIO_BANK2|GPIO_A2)<<1 | gpio_get_value(GPIO_BANK2|GPIO_A3)<<2;
+
+	// read pcbid
+	pcbid = gpio_get_value(GPIO_BANK2|GPIO_B0) | gpio_get_value(GPIO_BANK2|GPIO_B1)<<1 | gpio_get_value(GPIO_BANK2|GPIO_B2)<<2;
+
+	// only Tinker Board S and the PR stage PCB has this function
+	if(projectid!=TinkerBoard && pcbid >= ER){
+		printf("PC event = 0x%x\n", gpio_get_value(GPIO_BANK6|GPIO_A5));
+		if(gpio_get_value(GPIO_BANK6|GPIO_A5) == 1){
+			// SDP detected, enable EMMC and unlock usb current limit
+			printf("usb connected to SDP, force enter ums mode\n");
+			force_ums = true;
+			// unlock usb current limit and re-enable EMMC
+			gpio_direction_output(GPIO_BANK6|GPIO_A6, 1);
+			gpio_direction_output(GPIO_BANK6|GPIO_A7, 1);
+		}
 	}
 }
 

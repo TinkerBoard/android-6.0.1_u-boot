@@ -386,6 +386,12 @@ static int initr_onenand(void)
 }
 #endif
 
+static int initr_check_force_enter_ums_mode(void)
+{
+	check_force_enter_ums_mode();
+	return 0;
+}
+
 #ifdef CONFIG_GENERIC_MMC
 static int initr_mmc(void)
 {
@@ -812,6 +818,7 @@ init_fnc_t init_sequence_r[] = {
 #ifdef CONFIG_CMD_ONENAND
 	initr_onenand,
 #endif
+	initr_check_force_enter_ums_mode,
 #ifdef CONFIG_GENERIC_MMC
 	initr_mmc,
 #endif
