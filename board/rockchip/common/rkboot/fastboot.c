@@ -406,6 +406,7 @@ static void board_fbt_low_power_off(void)
  * don't enter fastboot mode, we need our environment setup for
  * things like unlock state, etc.
  */
+extern bool force_ums;
 void board_fbt_preboot(void)
 {
 	enum fbt_reboot_type frt;
@@ -516,6 +517,8 @@ void board_fbt_preboot(void)
 	}
 	RemotectlDeInit();
 #endif
+
+	if(force_ums) return;
 
 	if (frt == FASTBOOT_REBOOT_RECOVERY) {
 		FBTDBG("\n%s: starting recovery img because of reboot flag\n", __func__);
