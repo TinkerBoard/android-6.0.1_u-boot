@@ -215,6 +215,7 @@ void check_force_enter_ums_mode(void)
 			// unlock usb current limit and re-enable EMMC
 			gpio_direction_output(GPIO_BANK6|GPIO_A6, 1);
 			gpio_direction_output(GPIO_BANK6|GPIO_A7, 1);
+			mdelay(10);
 		}
 	}
 }
