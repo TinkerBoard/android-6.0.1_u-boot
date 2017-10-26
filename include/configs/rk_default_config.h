@@ -350,7 +350,7 @@
 /* rk serial module */
 #define	CONFIG_RK_UART
 #ifndef CONFIG_UART_NUM
-#define CONFIG_UART_NUM			UART_CH1
+#define CONFIG_UART_NUM			UART_CH3
 #endif
 #define CONFIG_RKUART2USB_FORCE		/* uart2usb force */
 
