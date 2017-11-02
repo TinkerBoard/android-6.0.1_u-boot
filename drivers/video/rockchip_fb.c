@@ -319,7 +319,7 @@ int rk_fb_parse_dt(struct rockchip_fb *rk_fb, const void *blob)
 		msleep(500);
 		val = i2c_reg_read(mcu_addr, 0x80);
 
-		if(val == 0xC3) {
+		if(val == 0xC3 || val == 0xDE) {
 			g_panel_connected = 1;
 			printf("tinker mcu connect success\n");
 		} else
