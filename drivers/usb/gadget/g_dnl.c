@@ -57,13 +57,13 @@ static struct usb_device_descriptor device_desc = {
 	.bDescriptorType = USB_DT_DEVICE,
 
 	.bcdUSB = __constant_cpu_to_le16(0x0200),
-	.bDeviceClass = USB_CLASS_COMM,
-	.bDeviceSubClass = 0x02, /*0x02:CDC-modem , 0x00:CDC-serial*/
+	.bDeviceClass = USB_CLASS_PER_INTERFACE,
+	.bDeviceSubClass = 0, /*0x02:CDC-modem , 0x00:CDC-serial*/
 
 	.idVendor = __constant_cpu_to_le16(CONFIG_G_DNL_VENDOR_NUM),
 	.idProduct = __constant_cpu_to_le16(CONFIG_G_DNL_PRODUCT_NUM),
-	.iProduct = STRING_PRODUCT,
-	.iSerialNumber = STRING_SERIAL,
+	/* .iProduct = DYNAMIC */
+	/* .iSerialNumber = DYNAMIC */
 	.bNumConfigurations = 1,
 };
 
@@ -214,14 +214,17 @@ static int g_dnl_bind(struct usb_composite_dev *cdev)
 	g_dnl_string_defs[1].id = id;
 	device_desc.iProduct = id;
 
-	id = usb_string_id(cdev);
-	if (id < 0)
-		return id;
-
-	g_dnl_string_defs[2].id = id;
-	device_desc.iSerialNumber = id;
-
 	g_dnl_bind_fixup(&device_desc, cdev->driver->name);
+
+	if (strlen(g_dnl_serial)) {
+		id = usb_string_id(cdev);
+		if (id < 0)
+			return id;
+
+		g_dnl_string_defs[2].id = id;
+		device_desc.iSerialNumber = id;
+	}
+
 	ret = g_dnl_config_register(cdev);
 	if (ret)
 		goto error;
