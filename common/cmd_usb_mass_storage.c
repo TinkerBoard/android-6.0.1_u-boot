@@ -121,11 +121,13 @@ int do_usb_mass_storage(cmd_tbl_t *cmdtp, int flag,
 		while (!g_dnl_board_usb_cable_connected()) {
 			if (ctrlc()) {
 				puts("\rCTRL+C - Operation aborted.\n");
+				rc = CMD_RET_SUCCESS;
 				goto exit;
 			}
 			if (!cable_ready_timeout) {
 				puts("\rUSB cable not detected.\n" \
 				     "Command exit.\n");
+				rc = CMD_RET_SUCCESS;
 				goto exit;
 			}
 
@@ -140,6 +142,11 @@ int do_usb_mass_storage(cmd_tbl_t *cmdtp, int flag,
 		usb_gadget_handle_interrupts(controller_index);
 
 		rc = fsg_main_thread(NULL);
+
+		if (rc == -ETIMEDOUT) {
+			goto exit;
+		}
+
 		if (rc) {
 			/* Check I/O error */
 			if (rc == -EIO)
@@ -148,13 +155,13 @@ int do_usb_mass_storage(cmd_tbl_t *cmdtp, int flag,
 			/* Check CTRL+C */
 			if (rc == -EPIPE)
 				printf("\rCTRL+C - Operation aborted\n");
-
+			rc = CMD_RET_SUCCESS;
 			goto exit;
 		}
 	}
 exit:
 	g_dnl_unregister();
-	return CMD_RET_SUCCESS;
+	return rc;
 }
 
 U_BOOT_CMD(ums, 4, 1, do_usb_mass_storage,

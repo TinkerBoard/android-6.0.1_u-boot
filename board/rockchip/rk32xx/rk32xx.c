@@ -177,6 +177,33 @@ static void board_init_adjust_env(void)
 	}
 }
 
+void usb_current_limit_ctrl(bool unlock_current)
+{
+	printf("%s: unlock_current = %d\n", __func__, unlock_current);
+
+	if(unlock_current == true)
+		gpio_direction_output(GPIO_BANK6|GPIO_A6, 1);
+	else
+		gpio_direction_output(GPIO_BANK6|GPIO_A6, 0);
+}
+
+/*
+*
+* eMMC maskrom mode : GPIO6_A7 (H:disable maskrom, L:enable maskrom)
+*
+*/
+void rk3288_maskrom_ctrl(bool enable_emmc)
+{
+	printf("%s: enable_emmc = %d\n", __func__, enable_emmc);
+
+	if(enable_emmc == true)
+		gpio_direction_output(GPIO_BANK6|GPIO_A7, 1);
+	else
+		gpio_direction_output(GPIO_BANK6|GPIO_A7, 0);
+
+	mdelay(10);
+}
+
 void check_force_enter_ums_mode(void)
 {
 	enum pcb_id pcbid;
@@ -213,8 +240,8 @@ void check_force_enter_ums_mode(void)
 			printf("usb connected to SDP, force enter ums mode\n");
 			force_ums = true;
 			// unlock usb current limit and re-enable EMMC
-			gpio_direction_output(GPIO_BANK6|GPIO_A6, 1);
-			gpio_direction_output(GPIO_BANK6|GPIO_A7, 1);
+			usb_current_limit_ctrl(true);
+			rk3288_maskrom_ctrl(true);
 			mdelay(10);
 		}
 	}
