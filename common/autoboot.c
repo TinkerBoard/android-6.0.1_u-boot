@@ -146,6 +146,7 @@ static int menukey;
 static int abortboot_normal(int bootdelay)
 {
 	int abort = 0;
+	int ch;
 	unsigned long ts;
 
 #ifdef CONFIG_MENUPROMPT
@@ -162,9 +163,10 @@ static int abortboot_normal(int bootdelay)
 	 */
 	if (bootdelay >= 0) {
 		if (tstc()) {	/* we got a key press	*/
-			(void) getc();  /* consume input	*/
+			ch = getc();  /* consume input	*/
 			puts("\b\b\b 0");
-			abort = 1;	/* don't auto boot	*/
+			if (ch == 0x20)
+			  abort = 1;	/* don't auto boot	*/
 		}
 	}
 #endif
@@ -180,7 +182,9 @@ static int abortboot_normal(int bootdelay)
 # ifdef CONFIG_MENUKEY
 				menukey = getc();
 # else
-				(void) getc();  /* consume input	*/
+				ch = getc();  /* consume input	*/
+				if (ch != 0x20)
+				  abort = 0;
 # endif
 				break;
 			}
